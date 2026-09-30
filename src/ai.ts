@@ -63,8 +63,14 @@ export async function searchModels(settings:AISettings):Promise<AIModel[]>{
   const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",{headers:{"x-goog-api-key":key}});
   if(!r.ok){const body=await r.text().catch(()=>""),detail=body.slice(0,160);throw new Error("Gemini model search failed ("+r.status+"). "+detail);}
   const d=await r.json();
-  return (d.models||[]).filter((m:any)=>Array.isArray(m.supportedGenerationMethods)&&m.supportedGenerationMethods.includes("generateContent"))
+  const live=(d.models||[]).filter((m:any)=>Array.isArray(m.supportedGenerationMethods)&&m.supportedGenerationMethods.includes("generateContent"))
    .map((m:any)=>({id:String(m.name||"").replace(/^models\//,""),name:m.displayName||m.name}));
+  const featured:AIModel[]=[
+   {id:"gemini-3.8-flash",name:"Gemini 3.8 Flash — Free tier"},
+   {id:"gemini-3.5-flash-lite",name:"Gemini 3.5 Flash-Lite — Free tier"},
+  ];
+  const merged=[...featured,...live];
+  return merged.filter((m,index)=>merged.findIndex(x=>x.id===m.id)===index);
  }
  if(settings.provider==="openai"){
   const r=await fetch("https://api.openai.com/v1/models",{headers:{Authorization:"Bearer "+key}});
