@@ -32,30 +32,7 @@ export const defaultAISettings:AISettings={
   model:"",
 };
 
-const modelHints:Record<AIProvider,AIModel[]>={
- openai:[
-  {id:"gpt-5.6",name:"GPT-5.6"},
-  {id:"gpt-5.6-luna",name:"GPT-5.6 Luna"},
-  {id:"gpt-5.6-terra",name:"GPT-5.6 Terra"},
-  {id:"gpt-5.6-sol",name:"GPT-5.6 Sol"},
- ],
- gemini:[
-  {id:"gemini-3.8-flash",name:"Gemini 3.8 Flash"},
-  {id:"gemini-3.7-flash",name:"Gemini 3.7 Flash"},
-  {id:"gemini-3.1-pro-preview",name:"Gemini 3.1 Pro"},
-  {id:"gemini-2.5-flash",name:"Gemini 2.5 Flash"},
-  {id:"gemini-2.5-pro",name:"Gemini 2.5 Pro"},
- ],
- claude:[
-  {id:"claude-opus-4-8",name:"Claude Opus 4.8"},
-  {id:"claude-opus-4-6",name:"Claude Opus 4.6"},
-  {id:"claude-sonnet-5",name:"Claude Sonnet 5"},
-  {id:"claude-sonnet-4-6",name:"Claude Sonnet 4.6"},
-  {id:"claude-haiku-4-5-20251001",name:"Claude Haiku 4.5"},
- ],
- openrouter:[],
- custom:[],
-};
+const modelHints:Record<AIProvider,AIModel[]>={openai:[],gemini:[],claude:[],openrouter:[],custom:[]};
 
 export function loadAISettings():AISettings{
  try{return {...defaultAISettings,...JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}")};}
@@ -134,29 +111,20 @@ export async function createTaskWithAI(request:string,settings:AISettings):Promi
  const now=new Date(), system=systemPrompt(now);
 
  if(settings.provider==="gemini"){
-  const call=async(model:string)=>{
-   const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent";
-   return fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":settings.apiKey.trim()},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:request.trim()}]}],generationConfig:{temperature:0.1,responseMimeType:"application/json"}})});
-  };
-  const tried=new Set<string>();
-  const candidates=[settings.model,...getModelHints("gemini").map(m=>m.id)].filter(Boolean);
+  const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(settings.model)+":generateContent";
   let last="";
-  for(const model of candidates){
-   if(tried.has(model))continue;
-   tried.add(model);
-   for(let attempt=0;attempt<2;attempt++){
-    const r=await call(model);
-    if(r.ok){
-     const d=await r.json(),content=d?.candidates?.[0]?.content?.parts?.[0]?.text;
-     if(typeof content!=="string")throw new Error("Gemini returned no task data.");
-     return extractJson(content);
-    }
-    last=await r.text().catch(()=> "");
-    if(r.status!==429&&r.status!==500&&r.status!==502&&r.status!==503)break;
-    await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
+  for(let attempt=0;attempt<3;attempt++){
+   const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":settings.apiKey.trim()},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:request.trim()}]}],generationConfig:{temperature:0.1,responseMimeType:"application/json"}})});
+   if(r.ok){
+    const d=await r.json(),content=d?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if(typeof content!=="string")throw new Error("Gemini returned no task data.");
+    return extractJson(content);
    }
+   last=await r.text().catch(()=> "");
+   if(r.status!==429&&r.status!==500&&r.status!==502&&r.status!==503)break;
+   await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
   }
-  throw new Error("Gemini is temporarily unavailable for the selected model. Try another model from Search models. "+(last.slice(0,180)||""));
+  throw new Error("Gemini model '"+settings.model+"' is temporarily unavailable. Search models and choose another available model, then try again.");
  }
  if(settings.provider==="claude"){
   const r=await fetch("https://api.anthropic.com/v1/messages",{
