@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState} from "react";
 import {Task,Frequency,frequencyLabels} from "./types";
 import {loadTasks,saveTasks,uid} from "./storage";
 import {nextRun,notify} from "./scheduler";
-import {createTaskWithAI,defaultAISettings,loadAISettings,parsedTaskToTask,saveAISettings,AISettings} from "./ai";
+import {createTaskWithAI,defaultAISettings,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel} from "./ai";
 
 function App(){
  const [tasks,setTasks]=useState<Task[]>(loadTasks);
@@ -14,6 +14,9 @@ function App(){
  const [draftAi,setDraftAi]=useState<AISettings>(ai);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
+ const [modelSearch,setModelSearch]=useState("");
+ const [models,setModels]=useState<AIModel[]>(getModelHints(ai.provider));
+ const [modelsBusy,setModelsBusy]=useState(false);
 
  useEffect(()=>saveTasks(tasks),[tasks]);
 
@@ -58,10 +61,24 @@ function App(){
  }
 
  function saveSettings(){
+  if(!draftAi.model.trim()){setError("Choose a model first.");return;}
   saveAISettings(draftAi);
   setAi(draftAi);
   setSettingsOpen(false);
   setError("");
+ }
+ function changeProvider(provider:AIProvider){
+  const next={...draftAi,provider,endpoint:provider==="custom"?draftAi.endpoint:providerEndpoint(provider),model:""};
+  setDraftAi(next);
+  setModels(getModelHints(provider));
+  setModelSearch("");
+  setError("");
+ }
+ async function refreshModels(){
+  setModelsBusy(true);setError("");
+  try{setModels(await searchModels(draftAi));}
+  catch(e){setError(e instanceof Error?e.message:"Could not load models.");}
+  finally{setModelsBusy(false);}
  }
 
  function runNow(id:string){
