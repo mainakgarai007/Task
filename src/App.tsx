@@ -16,7 +16,7 @@ function App(){
  const [processing,setProcessing]=useState("Preparing AI…");
  const [error,setError]=useState("");
  const [modelSearch,setModelSearch]=useState("");
- const [models,setModels]=useState<AIModel[]>(getModelHints(ai.provider));
+ const [models,setModels]=useState<AIModel[]>([]);
  const [modelsBusy,setModelsBusy]=useState(false);
 
  useEffect(()=>saveTasks(tasks),[tasks]);
@@ -79,7 +79,7 @@ function App(){
  }
  async function refreshModels(){
   setModelsBusy(true);setError("");
-  try{setModels(await searchModels(draftAi));}
+  try{const found=await searchModels(draftAi);setModels(found);if(found.length&&!draftAi.model)setDraftAi(prev=>({...prev,model:found[0].id}));}
   catch(e){setError(e instanceof Error?e.message:"Could not load models.");}
   finally{setModelsBusy(false);}
  }
