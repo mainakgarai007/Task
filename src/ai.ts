@@ -134,20 +134,29 @@ export async function createTaskWithAI(request:string,settings:AISettings):Promi
  const now=new Date(), system=systemPrompt(now);
 
  if(settings.provider==="gemini"){
-  const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(settings.model)+":generateContent";
+  const call=async(model:string)=>{
+   const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent";
+   return fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":settings.apiKey.trim()},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:request.trim()}]}],generationConfig:{temperature:0.1,responseMimeType:"application/json"}})});
+  };
+  const tried=new Set<string>();
+  const candidates=[settings.model,...getModelHints("gemini").map(m=>m.id)].filter(Boolean);
   let last="";
-  for(let attempt=0;attempt<3;attempt++){
-   const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":settings.apiKey.trim()},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:request.trim()}]}],generationConfig:{temperature:0.1,responseMimeType:"application/json"}})});
-   if(r.ok){
-    const d=await r.json(),content=d?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if(typeof content!=="string")throw new Error("Gemini returned no task data.");
-    return extractJson(content);
+  for(const model of candidates){
+   if(tried.has(model))continue;
+   tried.add(model);
+   for(let attempt=0;attempt<2;attempt++){
+    const r=await call(model);
+    if(r.ok){
+     const d=await r.json(),content=d?.candidates?.[0]?.content?.parts?.[0]?.text;
+     if(typeof content!=="string")throw new Error("Gemini returned no task data.");
+     return extractJson(content);
+    }
+    last=await r.text().catch(()=> "");
+    if(r.status!==429&&r.status!==500&&r.status!==502&&r.status!==503)break;
+    await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
    }
-   last=await r.text().catch(()=> "");
-   if(r.status!==429&&r.status!==500&&r.status!==502&&r.status!==503)break;
-   await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
   }
-  throw new Error("Gemini request failed after retries ("+(last.slice(0,140)||"temporary service error")+")");
+  throw new Error("Gemini is temporarily unavailable for the selected model. Try another model from Search models. "+(last.slice(0,180)||""));
  }
  if(settings.provider==="claude"){
   const r=await fetch("https://api.anthropic.com/v1/messages",{
