@@ -149,10 +149,18 @@ function App(){
 
   {settingsOpen&&<div className="modal"><div className="sheet">
    <div className="sheetHead"><div><div className="eyebrow">REQUIRED</div><h2>AI Settings</h2></div><button onClick={()=>setSettingsOpen(false)}>×</button></div>
-   <p className="hint">This public tool uses your own AI API. Your key is stored only in this browser's local storage.</p>
-   <label>OpenAI-compatible endpoint<input value={draftAi.endpoint} onChange={e=>setDraftAi({...draftAi,endpoint:e.target.value})} placeholder="https://openrouter.ai/api/v1/chat/completions"/></label>
-   <label>Model<input value={draftAi.model} onChange={e=>setDraftAi({...draftAi,model:e.target.value})} placeholder="Enter your model ID"/></label>
+   <p className="hint">Choose a provider, search its models, and select the model used to create tasks. Your API key stays in this browser.</p>
+   <label>AI provider<select value={draftAi.provider} onChange={e=>changeProvider(e.target.value as AIProvider)}>{Object.entries(providerLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
+   {draftAi.provider==="custom"&&<label>OpenAI-compatible endpoint<input value={draftAi.endpoint} onChange={e=>setDraftAi({...draftAi,endpoint:e.target.value})} placeholder="https://example.com/v1/chat/completions"/></label>}
    <label>API key<input type="password" value={draftAi.apiKey} onChange={e=>setDraftAi({...draftAi,apiKey:e.target.value})} placeholder="Paste your own API key"/></label>
+   <div className="modelHeader"><label>Model</label><button className="refreshModels" disabled={modelsBusy} onClick={refreshModels}>{modelsBusy?"Loading…":"↻ Search models"}</button></div>
+   <input className="modelSearch" placeholder="Search model name…" value={modelSearch} onChange={e=>setModelSearch(e.target.value)}/>
+   <select value={draftAi.model} onChange={e=>setDraftAi({...draftAi,model:e.target.value})}>
+    <option value="">Select a model</option>
+    {models.filter(m=>(m.name||m.id).toLowerCase().includes(modelSearch.toLowerCase())).slice(0,100).map(m=><option key={m.id} value={m.id}>{m.name||m.id} — {m.id}</option>)}
+   </select>
+   <div className="modelHint">Provider: {providerLabels[draftAi.provider]} · {models.length} models loaded</div>
+   {error&&<div className="error">{error}</div>}
    <button className="primary wide" onClick={saveSettings}>Save AI settings</button>
   </div></div>}
  </div>
