@@ -13,6 +13,7 @@ function App(){
  const [ai,setAi]=useState<AISettings>(loadAISettings);
  const [draftAi,setDraftAi]=useState<AISettings>(ai);
  const [busy,setBusy]=useState(false);
+ const [processing,setProcessing]=useState("Preparing AI…");
  const [error,setError]=useState("");
  const [modelSearch,setModelSearch]=useState("");
  const [models,setModels]=useState<AIModel[]>(getModelHints(ai.provider));
@@ -47,9 +48,11 @@ function App(){
 
  async function createWithAI(){
   if(!aiReady){setComposer(false);setDraftAi(ai);setSettingsOpen(true);return;}
-  setBusy(true);setError("");
+  setBusy(true);setProcessing("Understanding your request…");setError("");
   try{
+   setProcessing("Creating your task…");
    const parsed=await createTaskWithAI(request,ai);
+   setProcessing("Finalizing schedule…");
    const task=parsedTaskToTask(parsed,uid);
    setTasks(prev=>[task,...prev]);
    setRequest("");
@@ -142,8 +145,9 @@ function App(){
    <div className="sheetHead"><div><div className="eyebrow">AI TASK CREATOR</div><h2>Tell AI what to do</h2></div><button onClick={()=>setComposer(false)}>×</button></div>
    <p className="hint">Example: “Every Friday at 6 PM, remind me to review my weekly goals.”</p>
    <textarea className="aiInput" autoFocus placeholder="Describe your task in natural language..." value={request} onChange={e=>setRequest(e.target.value)}/>
+   {busy&&<div className="processing"><span className="spinner"></span><div><strong>{processing}</strong><small>AI is working on your task</small></div></div>}
    {error&&<div className="error">{error}</div>}
-   <button className="primary wide" disabled={busy} onClick={createWithAI}>{busy?"✨ AI is creating...":"✨ Create with AI"}</button>
+   <button className="primary wide" disabled={busy} onClick={createWithAI}>{busy?"✨ Creating task…":"✨ Create with AI"}</button>
    {!aiReady&&<button className="textBtn" onClick={()=>{setComposer(false);setDraftAi(ai);setSettingsOpen(true)}}>Configure AI first →</button>}
   </div></div>}
 
