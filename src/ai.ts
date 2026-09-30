@@ -35,7 +35,9 @@ export const defaultAISettings:AISettings={
 const modelHints:Record<AIProvider,AIModel[]>={
  openai:[
   {id:"gpt-5.6",name:"GPT-5.6"},
-  {id:"gpt-5.6-mini",name:"GPT-5.6 Mini"},
+  {id:"gpt-5.6-luna",name:"GPT-5.6 Luna"},
+  {id:"gpt-5.6-terra",name:"GPT-5.6 Terra"},
+  {id:"gpt-5.6-sol",name:"GPT-5.6 Sol"},
  ],
  gemini:[
   {id:"gemini-3.8-flash",name:"Gemini 3.8 Flash"},
@@ -45,9 +47,11 @@ const modelHints:Record<AIProvider,AIModel[]>={
   {id:"gemini-2.5-pro",name:"Gemini 2.5 Pro"},
  ],
  claude:[
-  {id:"claude-opus-4-1",name:"Claude Opus"},
-  {id:"claude-sonnet-4",name:"Claude Sonnet"},
-  {id:"claude-haiku-3-5",name:"Claude Haiku"},
+  {id:"claude-opus-4-8",name:"Claude Opus 4.8"},
+  {id:"claude-opus-4-6",name:"Claude Opus 4.6"},
+  {id:"claude-sonnet-5",name:"Claude Sonnet 5"},
+  {id:"claude-sonnet-4-6",name:"Claude Sonnet 4.6"},
+  {id:"claude-haiku-4-5-20251001",name:"Claude Haiku 4.5"},
  ],
  openrouter:[],
  custom:[],
@@ -70,29 +74,35 @@ export function providerEndpoint(provider:AIProvider){
 export function getModelHints(provider:AIProvider){return modelHints[provider]||[];}
 
 export async function searchModels(settings:AISettings):Promise<AIModel[]>{
- if(!settings.apiKey.trim())throw new Error("Add your API key first.");
- if(settings.provider==="gemini"){
-  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models?key="+encodeURIComponent(settings.apiKey.trim()));
-  if(!r.ok)throw new Error("Gemini model search failed ("+r.status+").");
-  const d=await r.json();
-  return (d.models||[]).filter((m:any)=>Array.isArray(m.supportedGenerationMethods)?m.supportedGenerationMethods.includes("generateContent"):true)
-   .map((m:any)=>({id:String(m.baseModelId||m.name||"").replace(/^models\//,""),name:m.displayName||m.name}));
- }
+ const key=settings.apiKey.trim();
  if(settings.provider==="openrouter"){
   const r=await fetch("https://openrouter.ai/api/v1/models");
   if(!r.ok)throw new Error("OpenRouter model search failed ("+r.status+").");
   const d=await r.json();
-  return (d.data||[]).map((m:any)=>({id:String(m.id),name:m.name||m.id}));
+  return (d.data||[]).filter((m:any)=>m?.id).map((m:any)=>({id:String(m.id),name:m.name||m.id}));
+ }
+ if(!key && settings.provider!=="custom")throw new Error("Add your API key first.");
+ if(settings.provider==="gemini"){
+  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",{headers:{"x-goog-api-key":key}});
+  if(!r.ok){const body=await r.text().catch(()=>""),detail=body.slice(0,160);throw new Error("Gemini model search failed ("+r.status+"). "+detail);}
+  const d=await r.json();
+  return (d.models||[]).filter((m:any)=>Array.isArray(m.supportedGenerationMethods)&&m.supportedGenerationMethods.includes("generateContent"))
+   .map((m:any)=>({id:String(m.name||"").replace(/^models\//,""),name:m.displayName||m.name}));
  }
  if(settings.provider==="openai"){
-  const r=await fetch("https://api.openai.com/v1/models",{headers:{Authorization:"Bearer "+settings.apiKey.trim()}});
+  const r=await fetch("https://api.openai.com/v1/models",{headers:{Authorization:"Bearer "+key}});
   if(!r.ok)throw new Error("OpenAI model search failed ("+r.status+").");
   const d=await r.json();
-  return (d.data||[]).filter((m:any)=>typeof m.id==="string"&&/^(gpt|o[0-9])/i.test(m.id)).map((m:any)=>({id:m.id,name:m.id}));
+  return (d.data||[]).filter((m:any)=>typeof m.id==="string").map((m:any)=>({id:m.id,name:m.id}));
+ }
+ if(settings.provider==="claude"){
+  const r=await fetch("https://api.anthropic.com/v1/models",{headers:{"x-api-key":key,"anthropic-version":"2023-06-01"}});
+  if(!r.ok)throw new Error("Claude model search failed ("+r.status+").");
+  const d=await r.json();
+  return (d.data||[]).map((m:any)=>({id:String(m.id),name:m.display_name||m.id}));
  }
  return getModelHints(settings.provider);
 }
-
 export interface ParsedTask{title:string;prompt:string;frequency:Frequency;firstRun:string;}
 
 function extractJson(text:string):ParsedTask{
@@ -124,16 +134,21 @@ export async function createTaskWithAI(request:string,settings:AISettings):Promi
  const now=new Date(), system=systemPrompt(now);
 
  if(settings.provider==="gemini"){
-  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(settings.model)+":generateContent?key="+encodeURIComponent(settings.apiKey.trim()),{
-   method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:request.trim()}]}],generationConfig:{temperature:0.1,responseMimeType:"application/json"}})
-  });
-  if(!r.ok)throw new Error("Gemini request failed ("+r.status+").");
-  const d=await r.json(),content=d?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if(typeof content!=="string")throw new Error("Gemini returned no task data.");
-  return extractJson(content);
+  const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(settings.model)+":generateContent";
+  let last="";
+  for(let attempt=0;attempt<3;attempt++){
+   const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":settings.apiKey.trim()},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:request.trim()}]}],generationConfig:{temperature:0.1,responseMimeType:"application/json"}})});
+   if(r.ok){
+    const d=await r.json(),content=d?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if(typeof content!=="string")throw new Error("Gemini returned no task data.");
+    return extractJson(content);
+   }
+   last=await r.text().catch(()=> "");
+   if(r.status!==429&&r.status!==500&&r.status!==502&&r.status!==503)break;
+   await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
+  }
+  throw new Error("Gemini request failed after retries ("+(last.slice(0,140)||"temporary service error")+")");
  }
-
  if(settings.provider==="claude"){
   const r=await fetch("https://api.anthropic.com/v1/messages",{
    method:"POST",headers:{"Content-Type":"application/json","x-api-key":settings.apiKey.trim(),"anthropic-version":"2023-06-01"},
