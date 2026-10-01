@@ -1,14 +1,15 @@
 import {useEffect,useMemo,useState} from "react";
-import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction} from "./types";
+import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule} from "./types";
 import {loadTasks,saveTasks,uid} from "./storage";
 import {nextRun,notify} from "./scheduler";
 import {createTaskWithAI,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel,executeTaskWithAI} from "./ai";
 import {executeDirectTask} from "./dataSources";
 
 function localISO(date:Date){return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);}
-function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string){
+function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string,intervalMinutes=60){
  const now=new Date(), d=new Date(date+"T"+time+":00");
  if(frequency==="hourly")return new Date(Date.now()+60000).toISOString();
+ if(frequency==="custom")return new Date(Date.now()+Math.max(1,intervalMinutes)*60000).toISOString();
  if(frequency==="daily"&&d<=now)d.setDate(d.getDate()+1);
  if(frequency==="weekly"){
   const target=Number(weekday);const day=d.getDay();let delta=(target-day+7)%7;if(delta===0&&d<=now)delta=7;d.setDate(d.getDate()+delta);
@@ -43,13 +44,19 @@ function App(){
  const [manualFrequency,setManualFrequency]=useState<Frequency>("daily");
  const [manualWeekday,setManualWeekday]=useState("1");
  const [manualMonthDay,setManualMonthDay]=useState("1");
- const [manualType,setManualType]=useState<"reminder"|"weather"|"news"|"anime"|"web">("reminder");
+ const [manualType,setManualType]=useState<"reminder"|"weather"|"news"|"anime"|"movie"|"web">("reminder");
  const [manualMessage,setManualMessage]=useState("");
  const [manualLocation,setManualLocation]=useState("");
  const [manualNewsType,setManualNewsType]=useState("new anime Hindi dubbed release");
  const [manualLanguage,setManualLanguage]=useState("hi");
  const [manualTopic,setManualTopic]=useState("");
  const [manualUrl,setManualUrl]=useState("");
+ const [manualScope,setManualScope]=useState("all updates");
+ const [manualCategory,setManualCategory]=useState("AI & tech");
+ const [manualRegion,setManualRegion]=useState("India");
+ const [manualInterval,setManualInterval]=useState("120");
+ const [manualEndDate,setManualEndDate]=useState("");
+ const [manualMaxRuns,setManualMaxRuns]=useState("");
  const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
 
  useEffect(()=>saveTasks(tasks),[tasks]);
@@ -63,11 +70,11 @@ function App(){
   try{
    const result=mode==="direct"?await executeDirectTask(task):await executeTaskWithAI(task,ai);
    const finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result};
-   setTasks(ts=>ts.map(t=>{if(t.id!==id)return t;const completed=t.frequency==="once";return {...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency)};}));
+   setTasks(ts=>ts.map(t=>{if(t.id!==id)return t;const completed=t.frequency==="once" || Boolean(t.schedule?.maxRuns && t.runCount+1>=t.schedule.maxRuns);return {...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency)};}));
    await notify("Task completed",task.title);
   }catch(e){
    const message=e instanceof Error?e.message:"Task execution failed.",finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"failed",error:message};
-   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,status:t.frequency==="once"?"failed":"active",nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency)}:t));
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,status:t.frequency==="once"?"failed":"active",nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
    await notify("Task failed",task.title);
   }finally{setRunning(null);}
  }
@@ -83,21 +90,25 @@ function App(){
   setCreatorMode(mode);setCreator(true);setError("");
  }
  function resetManual(){
-  setManualTitle("");setManualDate(new Date().toISOString().slice(0,10));setManualTime("19:00");setManualFrequency("daily");setManualType("reminder");setManualMessage("");setManualLocation("");setManualTopic("");setManualUrl("");
+  setManualTitle("");setManualDate(new Date().toISOString().slice(0,10));setManualTime("19:00");setManualFrequency("daily");setManualType("reminder");setManualMessage("");setManualLocation("");setManualTopic("");setManualUrl("");setManualScope("all updates");setManualCategory("AI & tech");setManualRegion("India");setManualInterval("120");setManualEndDate("");setManualMaxRuns("");
  }
  function makeManualTask(){
   setError("");
   if(!manualTitle.trim())return setError("Give the task a title.");
   if(manualFrequency==="once"&&new Date(manualDate+"T"+manualTime+":00")<=new Date())return setError("Choose a future time.");
+  if(manualFrequency==="custom"&&Number(manualInterval)<1)return setError("Custom interval must be at least 1 minute.");
+  if(manualMaxRuns&&Number(manualMaxRuns)<1)return setError("Maximum runs must be at least 1.");
   let action:TaskAction;
   let prompt="";
   if(manualType==="reminder"){if(!manualMessage.trim())return setError("Enter your reminder.");action={type:"reminder",message:manualMessage.trim()};prompt=manualMessage.trim();}
   else if(manualType==="weather"){if(!manualLocation.trim())return setError("Enter a weather location.");action={type:"weather",location:manualLocation.trim()};prompt="Get the current weather for "+manualLocation.trim()+".";}
-  else if(manualType==="news"){const topic=manualTopic.trim()||manualNewsType;action={type:"news",topic,language:manualLanguage};prompt="Get the latest updates about "+topic+".";}
-  else if(manualType==="anime"){const topic=manualTopic.trim()||manualNewsType;action={type:"news",topic:"anime "+topic,language:manualLanguage};prompt="Get the latest anime updates about "+topic+".";}
-  else {if(!manualUrl.trim())return setError("Enter a URL.");action={type:"web",url:manualUrl.trim()};prompt="Check this public URL for an update: "+manualUrl.trim();}
-  const firstRun=buildFirstRun(manualDate,manualTime,manualFrequency,manualWeekday,manualMonthDay);
-  const task:Task={id:uid(),title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",createdAt:new Date().toISOString(),runCount:0,history:[],executionMode:"direct",action};
+  else if(manualType==="news"){const topic=manualTopic.trim()||manualNewsType;action={type:"news",topic,language:manualLanguage,category:manualCategory,region:manualRegion,scope:manualScope};prompt="Get the latest "+manualScope+" about "+topic+" for "+manualRegion+".";}
+  else if(manualType==="anime"){const topic=manualTopic.trim()||"anime";action={type:"anime",topic,language:manualLanguage,scope:manualScope};prompt="Get "+manualScope+" about "+topic+".";}
+  else if(manualType==="movie"){const topic=manualTopic.trim()||"movies";action={type:"movie",topic,language:manualLanguage,scope:manualScope};prompt="Get "+manualScope+" about "+topic+".";}
+  else {if(!manualUrl.trim())return setError("Enter a URL.");action={type:"web",url:manualUrl.trim(),scope:manualScope};prompt="Check this public URL for "+manualScope+": "+manualUrl.trim();}
+  const schedule:TaskSchedule={time:manualTime,startDate:manualDate,endDate:manualEndDate||undefined,weekday:manualFrequency==="weekly"?Number(manualWeekday):undefined,monthDay:manualFrequency==="monthly"?Number(manualMonthDay):undefined,intervalMinutes:manualFrequency==="custom"?Number(manualInterval):undefined,maxRuns:manualMaxRuns?Number(manualMaxRuns):undefined};
+  const firstRun=buildFirstRun(manualDate,manualTime,manualFrequency,manualWeekday,manualMonthDay,Number(manualInterval));
+  const task:Task={id:uid(),title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",createdAt:new Date().toISOString(),runCount:0,history:[],executionMode:"direct",action,schedule};
   setTasks(prev=>[task,...prev]);notify("Task created",task.title);setCreator(false);resetManual();
  }
  async function createWithAI(){
@@ -129,14 +140,19 @@ function App(){
    {creatorMode==="choose"&&<><div className="sheetHead"><div><div className="eyebrow">CREATE TASK</div><h2>How do you want to create it?</h2></div><button onClick={()=>setCreator(false)}>×</button></div><div className="modeCards"><button onClick={()=>setCreatorMode("manual")}><span>🛠️</span><b>Manual task</b><small>Pick the schedule and action yourself. Direct APIs run it without AI.</small></button><button onClick={()=>setCreatorMode("ai")}><span>✨</span><b>AI task</b><small>Describe it naturally. AI creates the task plan and chooses direct APIs when possible.</small></button></div></>}
    {creatorMode==="manual"&&<><div className="sheetHead"><div><div className="eyebrow">MANUAL TASK</div><h2>Build it yourself</h2></div><button onClick={()=>setCreator(false)}>×</button></div>
     <label>Task name<input value={manualTitle} onChange={e=>setManualTitle(e.target.value)} placeholder="e.g. Morning weather"/></label>
-    <div className="twoCols"><label>Time<input type="time" value={manualTime} onChange={e=>setManualTime(e.target.value)}/></label><label>Frequency<select value={manualFrequency} onChange={e=>setManualFrequency(e.target.value as Frequency)}><option value="once">Once</option><option value="hourly">Every hour</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option></select></label></div>
+    <div className="sectionLabel">1 · Schedule</div>
+    <div className="twoCols"><label>Time<input type="time" value={manualTime} onChange={e=>setManualTime(e.target.value)}/></label><label>Frequency<select value={manualFrequency} onChange={e=>setManualFrequency(e.target.value as Frequency)}><option value="once">Once</option><option value="hourly">Every hour</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="custom">Custom interval</option></select></label></div>
     {manualFrequency!=="hourly"&&<label>{manualFrequency==="once"?"Date":"Start date"}<input type="date" value={manualDate} onChange={e=>setManualDate(e.target.value)}/></label>}
     {manualFrequency==="weekly"&&<label>Day<select value={manualWeekday} onChange={e=>setManualWeekday(e.target.value)}><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select></label>}
     {manualFrequency==="monthly"&&<label>Day of month<input type="number" min="1" max="31" value={manualMonthDay} onChange={e=>setManualMonthDay(e.target.value)}/></label>}
-    <label>What should happen?<select value={manualType} onChange={e=>setManualType(e.target.value as any)}><option value="reminder">🔔 Reminder</option><option value="news">📰 News update</option><option value="anime">🍿 Anime update</option><option value="weather">🌤️ Weather</option><option value="web">🌐 Web / RSS update</option></select></label>
-    {manualType==="reminder"&&<label>Enter your reminder<textarea value={manualMessage} onChange={e=>setManualMessage(e.target.value)} placeholder="Don't forget to study Maths."/></label>}
+    {manualFrequency==="custom"&&<label>Run every (minutes)<input type="number" min="1" value={manualInterval} onChange={e=>setManualInterval(e.target.value)}/></label>}
+    {manualFrequency!=="once"&&<div className="twoCols"><label>End date (optional)<input type="date" value={manualEndDate} onChange={e=>setManualEndDate(e.target.value)}/></label><label>Max runs (optional)<input type="number" min="1" value={manualMaxRuns} onChange={e=>setManualMaxRuns(e.target.value)} placeholder="Unlimited"/></label></div>
+    <div className="sectionLabel">2 · Action</div>
+    <label>Action<select value={manualType} onChange={e=>setManualType(e.target.value as any)}><option value="reminder">🔔 Reminder</option><option value="weather">🌤️ Weather</option><option value="news">📰 News</option><option value="anime">🍿 Anime</option><option value="movie">🎬 Movies</option><option value="web">🌐 Website / RSS</option></select></label>
+    {manualType==="reminder"&&<label>Reminder text<textarea value={manualMessage} onChange={e=>setManualMessage(e.target.value)} placeholder="Remind me to pay money."/></label>}
     {manualType==="weather"&&<label>Location<input value={manualLocation} onChange={e=>setManualLocation(e.target.value)} placeholder="Berhampore, West Bengal"/></label>}
-    {(manualType==="news"||manualType==="anime")&&<><label>Update type<select value={manualNewsType} onChange={e=>setManualNewsType(e.target.value)}><option>new Hindi movie release</option><option>new anime Hindi dubbed release</option><option>new anime episode or season</option><option>anime release / update</option><option>gaming news</option><option>AI & tech news</option><option>science & space news</option><option>India & world news</option></select></label><label>Language<select value={manualLanguage} onChange={e=>setManualLanguage(e.target.value)}><option value="hi">Hindi</option><option value="en">English</option><option value="bn">Bengali</option></select></label><label>Custom topic (optional)<input value={manualTopic} onChange={e=>setManualTopic(e.target.value)} placeholder="e.g. Solo Leveling season 3"/></label></>}
+    {(manualType==="news"||manualType==="anime"||manualType==="movie"||manualType==="web")&&<label>What to monitor<select value={manualScope} onChange={e=>setManualScope(e.target.value)}><option>all updates</option><option>new episode</option><option>new season</option><option>Hindi dubbed release</option><option>release date</option><option>price change</option><option>major updates</option><option>only when changed</option></select></label>}
+    {(manualType==="news"||manualType==="anime"||manualType==="movie")&&<><label>{manualType==="anime"?"Anime title / topic":manualType==="movie"?"Movie / topic":"Topic"}<input value={manualTopic} onChange={e=>setManualTopic(e.target.value)} placeholder={manualType==="anime"?"BLACK TORCH":manualType==="movie"?"Movie title or genre":"e.g. AI & tech"}/></label><div className="twoCols"><label>Language<select value={manualLanguage} onChange={e=>setManualLanguage(e.target.value)}><option value="hi">Hindi</option><option value="en">English</option><option value="bn">Bengali</option></select></label><label>Region<input value={manualRegion} onChange={e=>setManualRegion(e.target.value)}/></label></div>{manualType==="news"&&<label>Category<select value={manualCategory} onChange={e=>setManualCategory(e.target.value)}><option>AI & tech</option><option>Gaming</option><option>Science & space</option><option>India & world</option><option>Entertainment</option><option>Custom</option></select></label>}</>}
     {manualType==="web"&&<label>Public URL / RSS URL<input value={manualUrl} onChange={e=>setManualUrl(e.target.value)} placeholder="https://example.com/feed.xml"/></label>}
     {error&&<div className="error">{error}</div>}<button className="primary wide" onClick={makeManualTask}>＋ Create manual task</button>
    </>}
