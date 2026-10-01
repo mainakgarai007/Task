@@ -17,7 +17,8 @@ function App(){
  const [error,setError]=useState("");
  const [modelSearch,setModelSearch]=useState("");
  const [models,setModels]=useState<AIModel[]>([]);
- const [modelsBusy,setModelsBusy]=useState(false);\n const [running,setRunning]=useState<string|null>(null);
+ const [modelsBusy,setModelsBusy]=useState(false);
+ const [running,setRunning]=useState<string|null>(null);
 
  useEffect(()=>saveTasks(tasks),[tasks]);
 
