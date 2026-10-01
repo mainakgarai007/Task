@@ -17,9 +17,8 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
 
  if(frequency==="hourly"){
   const {minutes}=timeParts(schedule?.time);
-  d.setSeconds(0,0);
-  d.setMinutes(minutes);
   d.setHours(d.getHours()+1);
+  d.setMinutes(minutes,0,0);
  }
 
  if(frequency==="daily"){
