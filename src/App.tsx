@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule} from "./types";
 import {loadTasks,saveTasks,uid,normalizeTasks} from "./storage";
 import {nextRun,notify} from "./scheduler";
@@ -42,6 +42,7 @@ function App(){
  const [models,setModels]=useState<AIModel[]>([]);
  const [modelsBusy,setModelsBusy]=useState(false);
  const [running,setRunning]=useState<string|null>(null);
+ const executionLocks=useRef<Set<string>>(new Set());
  const [manualTitle,setManualTitle]=useState("");
  const [manualDate,setManualDate]=useState(new Date().toISOString().slice(0,10));
  const [manualTime,setManualTime]=useState("19:00");
@@ -83,8 +84,9 @@ function App(){
 
 
  async function executeTask(id:string){
-  if(running)return;
+  if(executionLocks.current.has(id))return;
   const task=tasks.find(x=>x.id===id);if(!task||!task.enabled||task.status==="completed")return;
+  executionLocks.current.add(id);
   const mode=task.executionMode||"ai";
   if(mode==="ai"&&!aiReady){setError("AI settings are required for this AI task.");setDraftAi(ai);setSettingsOpen(true);return;}
   setRunning(id);const started=new Date().toISOString();
@@ -105,7 +107,7 @@ function App(){
    const message=e instanceof Error?e.message:"Task execution failed.",finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"failed",error:message};
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,status:t.frequency==="once"?"failed":"active",nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
    await notify("Task failed",task.title);
-  }finally{setRunning(null);}
+  }finally{executionLocks.current.delete(id);setRunning(null);}
  }
 
  useEffect(()=>{

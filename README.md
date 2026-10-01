@@ -34,6 +34,8 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Monthly day
 - Maximum run count
 - Automatic stop when a stop condition is reached
+- Missed scheduled runs are detected when the browser scheduler wakes up
+- Each task is execution-locked so the same task cannot start twice concurrently
 
 ### Smart automation
 - Direct execution for supported public-data tasks
@@ -137,7 +139,7 @@ Public services can have rate limits, outages or CORS restrictions, so the app u
 
 ## Current limitations
 
-A normal GitHub Pages/browser deployment cannot guarantee execution while the browser/device is completely closed or offline.
+A normal GitHub Pages/browser deployment cannot guarantee execution while the browser/device is completely closed or offline. When the browser scheduler wakes after a missed run, the overdue task is handled on the next scheduler check rather than attempting to replay every missed interval. Each task also has an in-memory execution lock to prevent duplicate concurrent runs during scheduler overlap.
 
 Native Android background scheduling is planned for the Capacitor version.
 
