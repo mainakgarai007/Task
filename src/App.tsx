@@ -49,6 +49,9 @@ function App(){
  const [manualType,setManualType]=useState<"reminder"|"weather"|"news"|"anime"|"movie"|"web">("reminder");
  const [manualMessage,setManualMessage]=useState("");
  const [manualLocation,setManualLocation]=useState("");
+ const [weatherSearch,setWeatherSearch]=useState("");
+ const [weatherPlaces,setWeatherPlaces]=useState<{name:string;state?:string;country:string;latitude:number;longitude:number}[]>([]);
+ const [weatherBusy,setWeatherBusy]=useState(false);
  const [manualNewsType,setManualNewsType]=useState("new anime Hindi dubbed release");
  const [manualLanguage,setManualLanguage]=useState("hi");
  const [manualTopic,setManualTopic]=useState("");
@@ -63,6 +66,8 @@ function App(){
  const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
 
  useEffect(()=>saveTasks(tasks),[tasks]);
+ useEffect(()=>{if(manualType!=="weather"){setWeatherPlaces([]);return;}const q=weatherSearch.trim();if(!q){setWeatherPlaces([]);return;}const timer=setTimeout(async()=>{setWeatherBusy(true);try{const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=8&language=en&format=json&countryCode=IN");if(!r.ok)throw new Error();const d=await r.json();setWeatherPlaces((d?.results||[]).filter((p:any)=>p.country_code==="IN").map((p:any)=>({name:p.name,state:p.admin1,country:p.country,latitude:p.latitude,longitude:p.longitude})));}catch{setWeatherPlaces([]);}finally{setWeatherBusy(false);}},280);return()=>clearTimeout(timer);},[weatherSearch,manualType]);
+
 
  async function executeTask(id:string){
   if(running)return;
@@ -104,6 +109,8 @@ function App(){
   setManualType(type==="anime"||type==="movie"||type==="weather"||type==="news"||type==="web"?(type as "weather"|"news"|"anime"|"movie"|"web"):"reminder");
   setManualMessage(task.action?.message||"");
   setManualLocation(task.action?.location||"");
+  setWeatherSearch(task.action?.location||"");
+  setWeatherPlaces([]);
   setManualTopic(task.action?.topic||"");
   setManualTopicPreset(task.action?.topic&&["BLACK TORCH","Solo Leveling","Chainsaw Man","Mashle","One Piece","Demon Slayer","Jujutsu Kaisen","More Than a Married Couple, but Not Lovers"].includes(task.action.topic)?task.action.topic:"Custom");
   setManualLanguage(task.action?.language||"hi");
@@ -198,7 +205,7 @@ function App(){
     <div className="sectionLabel">2 · Action</div>
     <label>Action<select value={manualType} onChange={e=>setManualType(e.target.value as any)}><option value="reminder">🔔 Reminder</option><option value="weather">🌤️ Weather</option><option value="news">📰 News</option><option value="anime">🍿 Anime</option><option value="movie">🎬 Movies</option><option value="web">🌐 Website / RSS</option></select></label>
     {manualType==="reminder"&&<label>Reminder text<textarea value={manualMessage} onChange={e=>setManualMessage(e.target.value)} placeholder="Remind me to pay money."/></label>}
-    {manualType==="weather"&&<label>Location<input value={manualLocation} onChange={e=>setManualLocation(e.target.value)} placeholder="Berhampore, West Bengal"/></label>}
+    {manualType==="weather"&&<div className="weatherLocationBox"><label>Location <span className="fieldHint">India only</span><input value={weatherSearch||manualLocation} onChange={e=>{setWeatherSearch(e.target.value);setManualLocation(e.target.value)}} placeholder="Search Indian city / town…"/></label>{weatherBusy&&<div className="searchHint">Searching Indian locations…</div>}{weatherPlaces.length>0&&<div className="locationOptions">{weatherPlaces.map((p,i)=><button type="button" key={p.name+"-"+p.latitude+"-"+i} onClick={()=>{const label=p.state?p.name+", "+p.state:p.name;setManualLocation(label);setWeatherSearch(label);setWeatherPlaces([])}}><span>{p.name}</span><small>{p.state?p.state+", ":""}India</small></button>)}</div>}<div className="locationSelected">{manualLocation?"Selected: "+manualLocation:"Search and select an Indian location"}</div></div>}
     {(manualType==="news"||manualType==="anime"||manualType==="movie"||manualType==="web")&&<label>What to monitor<select value={manualScope} onChange={e=>setManualScope(e.target.value)}><option>all updates</option><option>new episode</option><option>new season</option><option>Hindi dubbed release</option><option>release date</option><option>price change</option><option>major updates</option><option>only when changed</option></select></label>}
     {(manualType==="news"||manualType==="anime"||manualType==="movie")&&<><label>{manualType==="anime"?"Anime title / topic":manualType==="movie"?"Movie / topic":"Topic"}<select value={manualTopicPreset} onChange={e=>{setManualTopicPreset(e.target.value);if(e.target.value!=="Custom")setManualTopic(e.target.value)}}><option value="Custom">Custom topic…</option>{manualType==="anime"&&<><option>BLACK TORCH</option><option>Solo Leveling</option><option>Chainsaw Man</option><option>Mashle</option><option>One Piece</option><option>Demon Slayer</option><option>Jujutsu Kaisen</option><option>More Than a Married Couple, but Not Lovers</option></>}{manualType==="movie"&&<><option>Upcoming movie releases</option><option>New movie releases</option><option>Movie release dates</option><option>Hindi dubbed movies</option></>}{manualType==="news"&&<><option>AI & tech</option><option>Gaming</option><option>Science & space</option><option>India & world</option><option>Anime & entertainment</option></>}</select>{manualTopicPreset==="Custom"&&<input value={manualTopic} onChange={e=>setManualTopic(e.target.value)} placeholder={manualType==="anime"?"BLACK TORCH":manualType==="movie"?"Movie title or genre":"e.g. AI & tech"}/>}</label><div className="twoCols"><label>Language<select value={manualLanguage} onChange={e=>setManualLanguage(e.target.value)}><option value="hi">Hindi</option><option value="en">English</option><option value="bn">Bengali</option></select></label><label>Region<input value={manualRegion} onChange={e=>setManualRegion(e.target.value)}/></label></div>{manualType==="news"&&<label>Category<select value={manualCategory} onChange={e=>setManualCategory(e.target.value)}><option>AI & tech</option><option>Gaming</option><option>Science & space</option><option>India & world</option><option>Entertainment</option><option>Custom</option></select></label>}</>}
     {manualType==="web"&&<label>Public URL / RSS URL<input value={manualUrl} onChange={e=>setManualUrl(e.target.value)} placeholder="https://example.com/feed.xml"/></label>}
