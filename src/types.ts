@@ -17,6 +17,7 @@ export interface TaskAction{
  type:ActionType;
  message?:string;
  location?:string;
+ locationMode?:"manual"|"auto-once"|"auto-live";
  latitude?:number;
  longitude?:number;
  topic?:string;
