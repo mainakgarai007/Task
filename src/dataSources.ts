@@ -1,4 +1,4 @@
-import {Task} from "./types";
+import type {Task} from "./types";
 
 export async function fetchWeather(location:string):Promise<string>{
  const q=location.trim();
@@ -61,7 +61,7 @@ export async function executeDirectTask(task:Task):Promise<string>{
  if(!a)return task.prompt;
  if(a.type==="reminder")return a.message||task.prompt;
  if(a.type==="weather")return await fetchWeather(a.location||"");
- if(a.type==="news")return await fetchNews(a.topic||task.prompt,a.language||"en");
+ if(a.type==="news"||a.type==="anime"||a.type==="movie"){const prefix=a.type==="anime"?"anime ":a.type==="movie"?"movie ":"";const scope=a.scope?` ${a.scope}`:"";return await fetchNews(prefix+(a.topic||task.prompt)+scope,a.language||"en");}
  if(a.type==="web")return await fetchWebUpdate(a.url||"");
  return task.prompt;
 }
