@@ -100,7 +100,7 @@ function App(){
   setManualEndDate(s.endDate||"");
   setManualMaxRuns(s.maxRuns?String(s.maxRuns):"");
   const type=task.action?.type;
-  setManualType(type==="anime"||type==="movie"||type==="weather"||type==="news"||type==="web"?"${type}":"reminder" as any);
+  setManualType(type==="anime"||type==="movie"||type==="weather"||type==="news"||type==="web"?(type as "weather"|"news"|"anime"|"movie"|"web"):"reminder");
   setManualMessage(task.action?.message||"");
   setManualLocation(task.action?.location||"");
   setManualTopic(task.action?.topic||"");
