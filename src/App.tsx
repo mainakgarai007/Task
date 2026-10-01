@@ -42,7 +42,7 @@ function App(){
    const message=e instanceof Error?e.message:"Task execution failed.";
    const finished=new Date().toISOString();
    const record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"failed",error:message};
-   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,status:"failed"}:t));
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,status:task.frequency==="once"?"failed":"active",nextRun:task.frequency==="once"?task.nextRun:nextRun(new Date(),task.frequency)}:t));
    await notify("Task failed",task.title);
   }finally{setRunning(null);}
  }
@@ -50,7 +50,7 @@ function App(){
  useEffect(()=>{
   const timer=setInterval(()=>{
    const now=Date.now();
-   tasks.filter(t=>t.enabled&&t.status!=="completed"&&new Date(t.nextRun).getTime()<=now).forEach(t=>executeTask(t.id));
+   tasks.filter(t=>t.enabled&&t.status==="active"&&new Date(t.nextRun).getTime()<=now).forEach(t=>executeTask(t.id));
   },15000);
   return()=>clearInterval(timer);
  },[tasks,ai,aiReady,running]);
