@@ -154,6 +154,43 @@ export async function createTaskWithAI(request:string,settings:AISettings):Promi
  return extractJson(content);
 }
 
+export async function executeTaskWithAI(task:Task,settings:AISettings):Promise<string>{
+ if(!settings.apiKey.trim())throw new Error("Add your AI API key first.");
+ if(!settings.model.trim())throw new Error("Choose an AI model first.");
+ const previous=task.lastResult||"(No previous result — first run.)";
+ const system="You are the execution engine for a scheduled automation. Execute the task instruction as usefully as possible. Current time: "+new Date().toISOString()+"\nTask: "+task.title+"\nPrevious result:\n"+previous+"\nReturn a concise useful result. Preserve important context from the previous run. Never invent live data.";
+ if(settings.provider==="gemini"){
+  const url="https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(settings.model)+":generateContent";
+  let last="";
+  for(let attempt=0;attempt<3;attempt++){
+   const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":settings.apiKey.trim()},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:task.prompt}]}],generationConfig:{temperature:0.2}})});
+   if(r.ok){
+    const d=await r.json(),content=d?.candidates?.[0]?.content?.parts?.map((p:any)=>p?.text||"").join("").trim();
+    if(content)return content;
+    throw new Error("Gemini returned no task result.");
+   }
+   last=await r.text().catch(()=> "");
+   if(r.status!==429&&r.status!==500&&r.status!==502&&r.status!==503)break;
+   await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
+  }
+  throw new Error("Gemini execution failed. "+last.slice(0,160));
+ }
+ if(settings.provider==="claude"){
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":settings.apiKey.trim(),"anthropic-version":"2023-06-01"},body:JSON.stringify({model:settings.model,max_tokens:1200,system,messages:[{role:"user",content:task.prompt}]})});
+  if(!r.ok)throw new Error("Claude execution failed ("+r.status+").");
+  const d=await r.json(),content=d?.content?.filter((x:any)=>x.type==="text").map((x:any)=>x.text).join("\n").trim();
+  if(content)return content;
+  throw new Error("Claude returned no task result.");
+ }
+ const endpoint=settings.provider==="custom"?settings.endpoint.trim():providerEndpoint(settings.provider);
+ if(!endpoint)throw new Error("Set a custom OpenAI-compatible endpoint.");
+ const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+settings.apiKey.trim()},body:JSON.stringify({model:settings.model.trim(),temperature:0.2,messages:[{role:"system",content:system},{role:"user",content:task.prompt}]})});
+ if(!r.ok){const body=await r.text().catch(()=> "");throw new Error("AI execution failed ("+r.status+"). "+body.slice(0,160));}
+ const d=await r.json(),content=d?.choices?.[0]?.message?.content;
+ if(typeof content!=="string"||!content.trim())throw new Error("AI returned no task result.");
+ return content.trim();
+}
+
 export function parsedTaskToTask(parsed:ParsedTask,uid:()=>string):Task{
  return {id:uid(),title:parsed.title,prompt:parsed.prompt,frequency:parsed.frequency,nextRun:parsed.firstRun,enabled:true,status:"active",createdAt:new Date().toISOString(),runCount:0,history:[]};
 }
