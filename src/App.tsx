@@ -27,6 +27,8 @@ function App(){
  const [filter,setFilter]=useState<"all"|"active"|"paused">("all");
  const [creator,setCreator]=useState(false);
  const [creatorMode,setCreatorMode]=useState<"choose"|"manual"|"ai">("choose");
+ const [editingId,setEditingId]=useState<string|null>(null);
+ const [deleteTarget,setDeleteTarget]=useState<Task|null>(null);
  const [settingsOpen,setSettingsOpen]=useState(false);
  const [request,setRequest]=useState("");
  const [ai,setAi]=useState<AISettings>(loadAISettings);
@@ -86,7 +88,42 @@ function App(){
 
  const visible=useMemo(()=>tasks.filter(t=>filter==="all"||(filter==="active"&&t.enabled)||(filter==="paused"&&!t.enabled)),[tasks,filter]);
 
+ function fillManualFromTask(task:Task){
+  const s=task.schedule||{};
+  setManualTitle(task.title);
+  setManualTime(s.time||new Date(task.nextRun).toTimeString().slice(0,5));
+  setManualDate(s.startDate||new Date(task.nextRun).toISOString().slice(0,10));
+  setManualFrequency(task.frequency);
+  setManualWeekday(String(s.weekday??1));
+  setManualMonthDay(String(s.monthDay??1));
+  setManualInterval(String(s.intervalMinutes??60));
+  setManualEndDate(s.endDate||"");
+  setManualMaxRuns(s.maxRuns?String(s.maxRuns):"");
+  const type=task.action?.type;
+  setManualType(type==="anime"||type==="movie"||type==="weather"||type==="news"||type==="web"?"${type}":"reminder" as any);
+  setManualMessage(task.action?.message||"");
+  setManualLocation(task.action?.location||"");
+  setManualTopic(task.action?.topic||"");
+  setManualLanguage(task.action?.language||"hi");
+  setManualScope(task.action?.scope||"all updates");
+  setManualCategory(task.action?.category||"AI & tech");
+  setManualRegion(task.action?.region||"India");
+ }
+ function openEdit(task:Task){
+  setError("");
+  setEditingId(task.id);
+  fillManualFromTask(task);
+  setCreatorMode("manual");
+  setCreator(true);
+ }
+ function confirmDelete(){
+  if(!deleteTarget)return;
+  setTasks(ts=>ts.filter(x=>x.id!==deleteTarget.id));
+  if(editingId===deleteTarget.id){setEditingId(null);setCreator(false);}
+  setDeleteTarget(null);
+ }
  function openCreator(mode:"choose"|"manual"|"ai"="choose"){
+  if(mode==="manual")setEditingId(null);
   setCreatorMode(mode);setCreator(true);setError("");
  }
  function resetManual(){
@@ -108,8 +145,17 @@ function App(){
   else {if(!manualUrl.trim())return setError("Enter a URL.");action={type:"web",url:manualUrl.trim(),scope:manualScope};prompt="Check this public URL for "+manualScope+": "+manualUrl.trim();}
   const schedule:TaskSchedule={time:manualTime,startDate:manualDate,endDate:manualEndDate||undefined,weekday:manualFrequency==="weekly"?Number(manualWeekday):undefined,monthDay:manualFrequency==="monthly"?Number(manualMonthDay):undefined,intervalMinutes:manualFrequency==="custom"?Number(manualInterval):undefined,maxRuns:manualMaxRuns?Number(manualMaxRuns):undefined};
   const firstRun=buildFirstRun(manualDate,manualTime,manualFrequency,manualWeekday,manualMonthDay,Number(manualInterval));
-  const task:Task={id:uid(),title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",createdAt:new Date().toISOString(),runCount:0,history:[],executionMode:"direct",action,schedule};
-  setTasks(prev=>[task,...prev]);notify("Task created",task.title);setCreator(false);resetManual();
+  const existing=editingId?tasks.find(t=>t.id===editingId):undefined;
+  if(existing){
+   const updated:Task={...existing,title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",action,schedule,lastError:undefined};
+   setTasks(prev=>prev.map(t=>t.id===existing.id?updated:t));
+   notify("Task updated",updated.title);
+  }else{
+   const task:Task={id:uid(),title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",createdAt:new Date().toISOString(),runCount:0,history:[],executionMode:"direct",action,schedule};
+   setTasks(prev=>[task,...prev]);
+   notify("Task created",task.title);
+  }
+  setCreator(false);setEditingId(null);resetManual();
  }
  async function createWithAI(){
   if(!aiReady){setCreator(false);setDraftAi(ai);setSettingsOpen(true);return;}
@@ -121,7 +167,7 @@ function App(){
  function changeProvider(provider:AIProvider){const next={...draftAi,provider,endpoint:provider==="custom"?draftAi.endpoint:providerEndpoint(provider),model:""};setDraftAi(next);setModels(getModelHints(provider));setModelSearch("");setError("");}
  async function refreshModels(){setModelsBusy(true);setError("");try{const found=await searchModels(draftAi);setModels(found);if(found.length&&!draftAi.model)setDraftAi(prev=>({...prev,model:found[0].id}));}catch(e){setError(e instanceof Error?e.message:"Could not load models.");}finally{setModelsBusy(false);}}
 
- return <div className="app">
+ return <div className="app" lang="en-IN">
   <header><div><div className="eyebrow">AI AUTOMATION</div><h1>Tasks</h1></div><div className="headerActions"><button className="settingsBtn" onClick={()=>{setDraftAi(ai);setSettingsOpen(true)}}>⚙ AI</button><button className="iconBtn" onClick={()=>openCreator()}>＋</button></div></header>
 
   <div className={"aiStatus "+(aiReady?"ready":"warning")}><span className="statusDot"></span>{aiReady?"AI task creation ready":"AI setup required for AI tasks"}<button onClick={()=>{setDraftAi(ai);setSettingsOpen(true)}}>{aiReady?"Settings":"Configure"}</button></div>
@@ -129,7 +175,7 @@ function App(){
 
   {visible.length===0?<section className="empty"><div className="orb">✦</div><h2>What should I schedule?</h2><p>Create a task manually with no AI at run time, or let AI build a smart task from your words.</p><div className="emptyButtons"><button className="secondary wide" onClick={()=>openCreator("manual")}>＋ Manual task</button><button className="primary wide" onClick={()=>openCreator("ai")}>✨ AI task</button></div></section>:
    <main>{visible.map(t=><article className="card" key={t.id}>
-    <div className="cardTop"><span className={"dot "+(t.enabled?"live":"paused")}></span><span>{t.enabled?"ACTIVE":t.status.toUpperCase()}</span><span className="modeBadge">{t.executionMode==="direct"?"DIRECT":"AI"}</span><button className="more" onClick={()=>setTasks(ts=>ts.filter(x=>x.id!==t.id))}>Delete</button></div>
+    <div className="cardTop"><span className={"dot "+(t.enabled?"live":"paused")}></span><span>{t.enabled?"ACTIVE":t.status.toUpperCase()}</span><span className="modeBadge">{t.executionMode==="direct"?"DIRECT":"AI"}</span><button className="more editBtn" onClick={()=>openEdit(t)}>Edit</button><button className="more deleteBtn" onClick={()=>setDeleteTarget(t)}>Delete</button></div>
     <h2>{t.title}</h2><p>{t.prompt}</p><div className="meta"><span>{frequencyLabels[t.frequency]}</span><span>Next · {new Date(t.nextRun).toLocaleString()}</span><span>Runs · {t.runCount}</span></div>{t.lastError&&<div className="error">{t.lastError}</div>}{t.lastResult&&<div className="resultPreview"><strong>Latest result</strong><p>{t.lastResult}</p></div>}
     <div className="actions"><button onClick={()=>setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:!x.enabled,status:x.enabled?"paused":"active"}:x))}>{t.enabled?"Pause":"Resume"}</button><button disabled={running===t.id} onClick={()=>executeTask(t.id)}>{running===t.id?"Running…":"Run now"}</button></div>
    </article>)}</main>}
@@ -138,7 +184,7 @@ function App(){
 
   {creator&&<div className="modal"><div className="sheet creatorSheet">
    {creatorMode==="choose"&&<><div className="sheetHead"><div><div className="eyebrow">CREATE TASK</div><h2>How do you want to create it?</h2></div><button onClick={()=>setCreator(false)}>×</button></div><div className="modeCards"><button onClick={()=>setCreatorMode("manual")}><span>🛠️</span><b>Manual task</b><small>Pick the schedule and action yourself. Direct APIs run it without AI.</small></button><button onClick={()=>setCreatorMode("ai")}><span>✨</span><b>AI task</b><small>Describe it naturally. AI creates the task plan and chooses direct APIs when possible.</small></button></div></>}
-   {creatorMode==="manual"&&<><div className="sheetHead"><div><div className="eyebrow">MANUAL TASK</div><h2>Build it yourself</h2></div><button onClick={()=>setCreator(false)}>×</button></div>
+   {creatorMode==="manual"&&<><div className="sheetHead"><div><div className="eyebrow">{editingId?"EDIT TASK":"MANUAL TASK"}</div><h2>{editingId?"Edit task":"Build it yourself"}</h2></div><button onClick={()=>{setCreator(false);setEditingId(null)}}>×</button></div>
     <label>Task name<input value={manualTitle} onChange={e=>setManualTitle(e.target.value)} placeholder="e.g. Morning weather"/></label>
     <div className="sectionLabel">1 · Schedule</div>
     <div className="twoCols"><label>Time<input type="time" value={manualTime} onChange={e=>setManualTime(e.target.value)}/></label><label>Frequency<select value={manualFrequency} onChange={e=>setManualFrequency(e.target.value as Frequency)}><option value="once">Once</option><option value="hourly">Every hour</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="custom">Every X minutes</option></select></label></div>
@@ -154,10 +200,12 @@ function App(){
     {(manualType==="news"||manualType==="anime"||manualType==="movie"||manualType==="web")&&<label>What to monitor<select value={manualScope} onChange={e=>setManualScope(e.target.value)}><option>all updates</option><option>new episode</option><option>new season</option><option>Hindi dubbed release</option><option>release date</option><option>price change</option><option>major updates</option><option>only when changed</option></select></label>}
     {(manualType==="news"||manualType==="anime"||manualType==="movie")&&<><label>{manualType==="anime"?"Anime title / topic":manualType==="movie"?"Movie / topic":"Topic"}<input value={manualTopic} onChange={e=>setManualTopic(e.target.value)} placeholder={manualType==="anime"?"BLACK TORCH":manualType==="movie"?"Movie title or genre":"e.g. AI & tech"}/></label><div className="twoCols"><label>Language<select value={manualLanguage} onChange={e=>setManualLanguage(e.target.value)}><option value="hi">Hindi</option><option value="en">English</option><option value="bn">Bengali</option></select></label><label>Region<input value={manualRegion} onChange={e=>setManualRegion(e.target.value)}/></label></div>{manualType==="news"&&<label>Category<select value={manualCategory} onChange={e=>setManualCategory(e.target.value)}><option>AI & tech</option><option>Gaming</option><option>Science & space</option><option>India & world</option><option>Entertainment</option><option>Custom</option></select></label>}</>}
     {manualType==="web"&&<label>Public URL / RSS URL<input value={manualUrl} onChange={e=>setManualUrl(e.target.value)} placeholder="https://example.com/feed.xml"/></label>}
-    {error&&<div className="error">{error}</div>}<button className="primary wide" onClick={makeManualTask}>＋ Create manual task</button>
+    {error&&<div className="error">{error}</div>}<button className="primary wide" onClick={makeManualTask}>{editingId?"✓ Save changes":"＋ Create manual task"}</button>
    </>}
    {creatorMode==="ai"&&<><div className="sheetHead"><div><div className="eyebrow">AI TASK CREATOR</div><h2>Tell AI what to do</h2></div><button onClick={()=>setCreator(false)}>×</button></div><p className="hint">Example: “Every day at 7 AM, tell me the weather in Berhampore.” If direct data is available, the task will use the API at run time instead of AI.</p><textarea className="aiInput" autoFocus placeholder="Describe your task in natural language..." value={request} onChange={e=>setRequest(e.target.value)}/>{busy&&<div className="processing"><span className="spinner"></span><div><strong>{processing}</strong><small>AI is creating the task plan</small></div></div>}{error&&<div className="error">{error}</div>}<button className="primary wide" disabled={busy} onClick={createWithAI}>{busy?"✨ Creating task…":"✨ Create with AI"}</button>{!aiReady&&<button className="textBtn" onClick={()=>{setCreator(false);setDraftAi(ai);setSettingsOpen(true)}}>Configure AI first →</button>}</>}
   </div></div>}
+
+  {deleteTarget&&<div className="modal"><div className="sheet confirmSheet"><div className="sheetHead"><div><div className="eyebrow">DELETE TASK</div><h2>Delete “{deleteTarget.title}”?</h2></div><button onClick={()=>setDeleteTarget(null)}>×</button></div><p className="hint">This task and its saved execution history will be removed from this browser. This cannot be undone.</p><div className="confirmActions"><button className="secondary" onClick={()=>setDeleteTarget(null)}>Cancel</button><button className="dangerBtn" onClick={confirmDelete}>Delete task</button></div></div></div>}
 
   {settingsOpen&&<div className="modal"><div className="sheet"><div className="sheetHead"><div><div className="eyebrow">AI SETTINGS</div><h2>AI provider</h2></div><button onClick={()=>setSettingsOpen(false)}>×</button></div><p className="hint">AI is used only where the task needs it. Your key stays in this browser.</p><label>AI provider<select value={draftAi.provider} onChange={e=>changeProvider(e.target.value as AIProvider)}>{Object.entries(providerLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>{draftAi.provider==="custom"&&<label>OpenAI-compatible endpoint<input value={draftAi.endpoint} onChange={e=>setDraftAi({...draftAi,endpoint:e.target.value})}/></label>}<label>API key<input type="password" value={draftAi.apiKey} onChange={e=>setDraftAi({...draftAi,apiKey:e.target.value})} placeholder="Paste your own API key"/></label><div className="modelHeader"><label>Model</label><button className="refreshModels" disabled={modelsBusy} onClick={refreshModels}>{modelsBusy?"Loading…":"↻ Search models"}</button></div><input className="modelSearch" placeholder="Search model name…" value={modelSearch} onChange={e=>setModelSearch(e.target.value)}/><select value={draftAi.model} onChange={e=>setDraftAi({...draftAi,model:e.target.value})}><option value="">Select a model</option>{models.filter(m=>(m.name||m.id).toLowerCase().includes(modelSearch.toLowerCase())).slice(0,100).map(m=><option key={m.id} value={m.id}>{m.name||m.id} — {m.id}</option>)}</select><div className="modelHint">{models.length} models loaded · {providerLabels[draftAi.provider]}</div>{error&&<div className="error">{error}</div>}<button className="primary wide" onClick={saveSettings}>Save AI settings</button></div></div>}
  </div>;
