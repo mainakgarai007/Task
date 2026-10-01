@@ -11,6 +11,7 @@ export interface TaskSchedule{
  monthDay?:number;
  intervalMinutes?:number;
  maxRuns?:number;
+ notifyOnChange?:boolean;
 }
 
 export interface TaskAction{
@@ -25,6 +26,9 @@ export interface TaskAction{
  url?:string;
  scope?:string;
  region?:string;
+ condition?:string;
+ stopCondition?:string;
+ notifyOnChange?:boolean;
  category?:string;
 }
 
