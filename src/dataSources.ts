@@ -21,20 +21,27 @@ async function fetchRss(query:string,language="en"):Promise<string>{
  if(!q)throw new Error("News topic is required.");
  const params=language==="hi"?"hl=hi&gl=IN&ceid=IN:hi":language==="bn"?"hl=bn&gl=IN&ceid=IN:bn":"hl=en&gl=US&ceid=US:en";
  const rss="https://news.google.com/rss/search?q="+encodeURIComponent(q)+"&"+params;
- const urls=[rss,"https://api.allorigins.win/raw?url="+encodeURIComponent(rss)];
- let text="";
- for(const u of urls){
-  try{const r=await fetch(u);if(r.ok){text=await r.text();if(text.includes("<item"))break;}}catch{}
+ const encoded=encodeURIComponent(rss);
+ const candidates=[
+  "https://api.rss2json.com/v1/api.json?rss_url="+encoded,
+  "https://api.allorigins.win/raw?url="+encoded,
+  "https://r.jina.ai/"+rss
+ ];
+ let items:{title:string;source?:string}[]=[];
+ for(const url of candidates){
+  try{
+   const response=await fetch(url);
+   const data=await response.json().catch(()=>null);
+   if(data?.items?.length){items=data.items.slice(0,6).map((x:any)=>({title:String(x.title||"Untitled"),source:String(x.author||x.source||"News")}));break;}
+   if(data?.contents){
+    const doc=new DOMParser().parseFromString(String(data.contents),"text/xml");
+    items=[...doc.querySelectorAll("item")].slice(0,6).map(item=>({title:item.querySelector("title")?.textContent?.trim()||"Untitled",source:item.querySelector("source")?.textContent?.trim()||"News"}));
+    if(items.length)break;
+   }
+  }catch{}
  }
- if(!text||!text.includes("<item"))throw new Error("Could not fetch the public news feed right now.");
- const doc=new DOMParser().parseFromString(text,"text/xml");
- const items=[...doc.querySelectorAll("item")].slice(0,6);
- if(!items.length)throw new Error("No matching updates found.");
- return items.map((item,i)=>{
-  const title=item.querySelector("title")?.textContent?.trim()||"Untitled";
-  const source=item.querySelector("source")?.textContent?.trim()||"News";
-  return `${i+1}. ${title} — ${source}`;
- }).join("\n");
+ if(!items.length)throw new Error("Public news sources are temporarily unavailable. Try again later.");
+ return items.map((x,i)=>`${i+1}. ${x.title} — ${x.source}`).join("\n");
 }
 
 export async function fetchNews(topic:string,language="en"):Promise<string>{
@@ -61,7 +68,8 @@ export async function executeDirectTask(task:Task):Promise<string>{
  if(!a)return task.prompt;
  if(a.type==="reminder")return a.message||task.prompt;
  if(a.type==="weather")return await fetchWeather(a.location||"");
- if(a.type==="news"||a.type==="anime"||a.type==="movie"){const prefix=a.type==="anime"?"anime ":a.type==="movie"?"movie ":"";const scope=a.scope?` ${a.scope}`:"";return await fetchNews(prefix+(a.topic||task.prompt)+scope,a.language||"en");}
+ if(a.type==="anime")return await fetchAnime(a.topic||task.prompt,a.language||"en",a.scope||"all updates");
+ if(a.type==="news"||a.type==="movie"){const prefix=a.type==="movie"?"movie ":"";const scope=a.scope?" "+a.scope:"";return await fetchNews(prefix+(a.topic||task.prompt)+scope,a.language||"en");}
  if(a.type==="web")return await fetchWebUpdate(a.url||"");
  return task.prompt;
 }
