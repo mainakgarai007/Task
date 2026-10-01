@@ -7,9 +7,18 @@ export function nextRun(from:Date,frequency:Task["frequency"]):string{
  if(frequency==="monthly")d.setMonth(d.getMonth()+1);
  return d.toISOString();
 }
-export function notify(title:string,body:string){
- if("Notification" in window){
-  if(Notification.permission==="granted")new Notification(title,{body});
-  else if(Notification.permission!=="denied")Notification.requestPermission().then(p=>{if(p==="granted")new Notification(title,{body})});
- }
+export async function notify(title:string,body:string){
+ try{
+  if("serviceWorker" in navigator){
+   const reg=await navigator.serviceWorker.getRegistration();
+   if(reg?.showNotification){await reg.showNotification(title,{body});return;}
+  }
+  if("Notification" in window){
+   if(Notification.permission==="granted")new Notification(title,{body});
+   else if(Notification.permission!=="denied"){
+    const p=await Notification.requestPermission();
+    if(p==="granted")new Notification(title,{body});
+   }
+  }
+ }catch{}
 }
