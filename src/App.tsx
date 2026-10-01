@@ -67,7 +67,7 @@ function App(){
  const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
 
  useEffect(()=>saveTasks(tasks),[tasks]);
- useEffect(()=>{if(manualType!=="weather"){setWeatherPlaces([]);return;}const q=weatherSearch.trim();if(!q){setWeatherPlaces([]);return;}const timer=setTimeout(async()=>{setWeatherBusy(true);try{const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=8&language=en&format=json&countryCode=IN");if(!r.ok)throw new Error();const d=await r.json();setWeatherPlaces((d?.results||[]).filter((p:any)=>p.country_code==="IN").map((p:any)=>({name:p.name,state:p.admin1,country:p.country,latitude:p.latitude,longitude:p.longitude})));}catch{setWeatherPlaces([]);}finally{setWeatherBusy(false);}},280);return()=>clearTimeout(timer);},[weatherSearch,manualType]);
+ useEffect(()=>{if(manualType!=="weather"){setWeatherPlaces([]);return;}const q=weatherSearch.trim();if(!q){setWeatherPlaces([]);return;}const timer=setTimeout(async()=>{setWeatherBusy(true);try{const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=100&language=en&format=json&countryCode=IN");if(!r.ok)throw new Error();const d=await r.json();setWeatherPlaces((d?.results||[]).filter((p:any)=>p.country_code==="IN").map((p:any)=>({name:p.name,state:p.admin1,country:p.country,latitude:p.latitude,longitude:p.longitude})));}catch{setWeatherPlaces([]);}finally{setWeatherBusy(false);}},280);return()=>clearTimeout(timer);},[weatherSearch,manualType]);
 
 
  async function executeTask(id:string){
