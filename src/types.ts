@@ -6,6 +6,9 @@ export type ActionType="reminder"|"weather"|"news"|"anime"|"movie"|"web"|"ai";
 export type ConditionSource="result"|"previousResult"|"changed";
 export type ConditionOperator="contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal";
 export interface TaskCondition{source:ConditionSource;operator:ConditionOperator;value?:string}
+export type ConditionSource="result"|"previousResult"|"changed";
+export type ConditionOperator="contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal";
+export interface TaskCondition{source:ConditionSource;operator:ConditionOperator;value?:string}
 
 export interface TaskSchedule{
  time:string;
