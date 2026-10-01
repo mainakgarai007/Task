@@ -54,9 +54,9 @@ function extractJson(text:string):ParsedTask{
  const cleaned=text.replace(/\`\`\`json/gi,"").replace(/\`\`\`/g,"").trim();
  const match=cleaned.match(/\{[\s\S]*\}/);if(!match)throw new Error("AI did not return a valid task.");
  const data=JSON.parse(match[0]);
- const frequencies:Frequency[]=["once","hourly","daily","weekly","monthly"];
+ const frequencies:Frequency[]=["once","hourly","daily","weekly","monthly","custom"];
  const modes:ExecutionMode[]=["direct","ai"];
- const actionTypes:ActionType[]=["reminder","weather","news","web","ai"];
+ const actionTypes:ActionType[]=["reminder","weather","news","anime","movie","web","ai"];
  if(!data.title||!data.prompt||!frequencies.includes(data.frequency)||!data.firstRun)throw new Error("AI returned an incomplete task.");
  if(!modes.includes(data.executionMode))throw new Error("AI did not specify an execution mode.");
  const action=data.action||{type:data.executionMode==="ai"?"ai":"reminder"};
@@ -74,11 +74,13 @@ Direct actions:
 - reminder: local reminder text only; action.message
 - weather: use public Open-Meteo; action.location
 - news: use a public news/RSS search; action.topic and optional action.language ("en","hi","bn")
-- web: fetch a public URL/RSS; action.url
+- anime: monitor public news/RSS for an anime; action.topic, action.scope, action.language
+- movie: monitor public news/RSS for a movie/release; action.topic, action.scope, action.language
+- web: fetch a public URL/RSS; action.url, action.scope
 Use executionMode "ai" only when the task genuinely needs AI reasoning/generation at run time.
 
 Return ONLY JSON:
-{"title":"short title","prompt":"useful instruction","frequency":"once|hourly|daily|weekly|monthly","firstRun":"ISO-8601","executionMode":"direct|ai","action":{"type":"reminder|weather|news|web|ai","message":"","location":"","topic":"","language":"en","url":""}}
+{"title":"short title","prompt":"useful instruction","frequency":"once|hourly|daily|weekly|monthly|custom","firstRun":"ISO-8601","executionMode":"direct|ai","action":{"type":"reminder|weather|news|anime|movie|web|ai","message":"","location":"","topic":"","language":"en","scope":"","url":""}}
 
 For weather/news/web, do not put made-up data in the prompt. Resolve relative dates/times using current time and timezone.`;
 
