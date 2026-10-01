@@ -1,8 +1,8 @@
 import {useEffect,useMemo,useState} from "react";
-import {Task,Frequency,frequencyLabels} from "./types";
+import {Task,frequencyLabels,ExecutionRecord} from "./types";
 import {loadTasks,saveTasks,uid} from "./storage";
 import {nextRun,notify} from "./scheduler";
-import {createTaskWithAI,defaultAISettings,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel} from "./ai";
+import {createTaskWithAI,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel,executeTaskWithAI} from "./ai";
 
 function App(){
  const [tasks,setTasks]=useState<Task[]>(loadTasks);
@@ -17,25 +17,43 @@ function App(){
  const [error,setError]=useState("");
  const [modelSearch,setModelSearch]=useState("");
  const [models,setModels]=useState<AIModel[]>([]);
- const [modelsBusy,setModelsBusy]=useState(false);
+ const [modelsBusy,setModelsBusy]=useState(false);\n const [running,setRunning]=useState<string|null>(null);
 
  useEffect(()=>saveTasks(tasks),[tasks]);
 
+ async function executeTask(id:string){
+  if(running)return;
+  const task=tasks.find(x=>x.id===id);
+  if(!task||!task.enabled||task.status==="completed")return;
+  if(!aiReady){setError("AI settings are required to run tasks.");setDraftAi(ai);setSettingsOpen(true);return;}
+  setRunning(id);
+  const started=new Date().toISOString();
+  try{
+   const result=await executeTaskWithAI(task,ai);
+   const finished=new Date().toISOString();
+   const record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result};
+   setTasks(ts=>ts.map(t=>{
+    if(t.id!==id)return t;
+    const completed=t.frequency==="once";
+    return {...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency)};
+   }));
+   await notify("Task completed",task.title);
+  }catch(e){
+   const message=e instanceof Error?e.message:"Task execution failed.";
+   const finished=new Date().toISOString();
+   const record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"failed",error:message};
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,status:"failed"}:t));
+   await notify("Task failed",task.title);
+  }finally{setRunning(null);}
+ }
+
  useEffect(()=>{
   const timer=setInterval(()=>{
-   setTasks(prev=>prev.map(t=>{
-    if(!t.enabled||t.status==="completed")return t;
-    if(new Date(t.nextRun)<=new Date()){
-     notify("Task completed",t.title);
-     const run=new Date().toISOString();
-     const completed=t.frequency==="once";
-     return {...t,lastRun:run,runCount:t.runCount+1,history:[run,...t.history].slice(0,50),enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency)};
-    }
-    return t;
-   }));
-  },30000);
+   const now=Date.now();
+   tasks.filter(t=>t.enabled&&t.status!=="completed"&&new Date(t.nextRun).getTime()<=now).forEach(t=>executeTask(t.id));
+  },15000);
   return()=>clearInterval(timer);
- },[]);
+ },[tasks,ai,aiReady,running]);
 
  const visible=useMemo(()=>tasks.filter(t=>filter==="all"||(filter==="active"&&t.enabled)||(filter==="paused"&&!t.enabled)),[tasks,filter]);
  const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
@@ -84,12 +102,7 @@ function App(){
   finally{setModelsBusy(false);}
  }
 
- function runNow(id:string){
-  const run=new Date().toISOString();
-  setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:run,runCount:t.runCount+1,history:[run,...t.history].slice(0,50),nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency)}:t));
-  const t=tasks.find(x=>x.id===id);
-  if(t)notify("Task ran",t.title);
- }
+ function runNow(id:string){executeTask(id);}
 
  return <div className="app">
   <header>
@@ -124,10 +137,10 @@ function App(){
      <div className="cardTop"><span className={"dot "+(t.enabled?"live":"paused")}></span><span>{t.enabled?"ACTIVE":t.status.toUpperCase()}</span><button className="more" onClick={()=>setTasks(ts=>ts.filter(x=>x.id!==t.id))}>Delete</button></div>
      <h2>{t.title}</h2>
      <p>{t.prompt}</p>
-     <div className="meta"><span>{frequencyLabels[t.frequency]}</span><span>Next · {new Date(t.nextRun).toLocaleString()}</span><span>Runs · {t.runCount}</span></div>
+     <div className="meta"><span>{frequencyLabels[t.frequency]}</span><span>Next · {new Date(t.nextRun).toLocaleString()}</span><span>Runs · {t.runCount}</span></div>{t.lastError&&<div className="error">{t.lastError}</div>}{t.lastResult&&<div className="resultPreview"><strong>Latest result</strong><p>{t.lastResult}</p></div>}
      <div className="actions">
       <button onClick={()=>setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:!x.enabled,status:x.enabled?"paused":"active"}:x))}>{t.enabled?"Pause":"Resume"}</button>
-      <button onClick={()=>runNow(t.id)}>Run now</button>
+      <button disabled={running===t.id} onClick={()=>runNow(t.id)}>{running===t.id?"Running…":"Run now"}</button>
      </div>
     </article>
    )}</main>
