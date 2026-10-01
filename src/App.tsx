@@ -89,7 +89,7 @@ function App(){
  const visible=useMemo(()=>tasks.filter(t=>filter==="all"||(filter==="active"&&t.enabled)||(filter==="paused"&&!t.enabled)),[tasks,filter]);
 
  function fillManualFromTask(task:Task){
-  const s=task.schedule||{};
+  const s:TaskSchedule=task.schedule||{time:""};
   setManualTitle(task.title);
   setManualTime(s.time||new Date(task.nextRun).toTimeString().slice(0,5));
   setManualDate(s.startDate||new Date(task.nextRun).toISOString().slice(0,10));
