@@ -90,17 +90,41 @@ async function fetchRss(query:string,language="en"):Promise<string>{
 async function fetchAnime(topic:string,language="en",scope="all updates"):Promise<string>{
  const q=topic.trim();
  if(!q)throw new Error("Anime title/topic is required.");
+ const lines:string[]=[];
+ try{
+  const query='query($search:String){Page(page:1,perPage:5){media(search:$search,type:ANIME,sort:SEARCH_MATCH){id,title{romaji english native},type,status,episodes,season,seasonYear,startDate{year month day},nextAiringEpisode{episode airingAt},siteUrl}}}';
+  const ar=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{search:q}})});
+  if(ar.ok){
+   const data=await ar.json();
+   for(const a of (data?.data?.Page?.media||[])){
+    const title=a.title?.english||a.title?.romaji||a.title?.native||q;
+    const next=a.nextAiringEpisode?.episode?` · Next ep ${a.nextAiringEpisode.episode}`:"";
+    const date=a.nextAiringEpisode?.airingAt?` · ${new Date(a.nextAiringEpisode.airingAt*1000).toLocaleString("en-IN")}`:"";
+    const status=a.status?` · ${a.status.replaceAll("_"," ")}`:"";
+    const season=a.seasonYear?` · ${a.season||""} ${a.seasonYear}`:"";
+    const ep=a.episodes!=null?` · ${a.episodes} eps`:"";
+    lines.push(`• ${title} — ${a.type||"TV"}${status}${ep}${season}${next}${date}`);
+   }
+  }
+ }catch{}
  try{
   const response=await fetch("https://api.jikan.moe/v4/anime?q="+encodeURIComponent(q)+"&limit=5&sfw=true");
   if(response.ok){
    const data=await response.json();
-   const list=(data?.data||[]).slice(0,5);
-   if(list.length)return list.map((a:any,i:number)=>`${i+1}. ${a.title||q} — ${a.type||"Anime"} · ${a.status||"Unknown status"} · ${a.episodes??"?"} eps`).join("\n");
+   for(const a of (data?.data||[]).slice(0,5)){
+    const score=a.score!=null?` · Score ${a.score}`:"";
+    const aired=a.aired?.from?` · Start ${new Date(a.aired.from).toLocaleDateString("en-IN")}`:"";
+    lines.push(`• ${a.title||q} — ${a.type||"Anime"} · ${a.status||"Unknown status"} · ${a.episodes??"?"} eps${score}${aired}`);
+   }
   }
  }catch{}
+ const unique=[...new Set(lines)];
+ if(scope==="new episode")return unique.filter(x=>/Next ep|airing/i.test(x)).slice(0,8).join("\n")||"No upcoming episode data found right now.";
+ if(scope==="new season")return unique.filter(x=>/season|winter|spring|summer|fall/i.test(x)).slice(0,8).join("\n")||"No season update data found right now.";
+ if(scope==="release date")return unique.filter(x=>/Start|Next ep|season/i.test(x)).slice(0,8).join("\n")||"No release-date data found right now.";
+ if(unique.length)return unique.slice(0,8).join("\n");
  return fetchRss("anime "+q+" "+scope,language);
 }
-
 export async function fetchNews(topic:string,language="en"):Promise<string>{
  return fetchRss(topic,language);
 }
