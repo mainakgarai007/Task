@@ -4,7 +4,7 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
  if(frequency==="hourly")d.setHours(d.getHours()+1);
  if(frequency==="daily")d.setDate(d.getDate()+1);
  if(frequency==="weekly")d.setDate(d.getDate()+7);
- if(frequency==="monthly")d.setMonth(d.getMonth()+1);
+ if(frequency==="monthly"){\n  const day=d.getDate();\n  const nextMonth=new Date(d.getFullYear(),d.getMonth()+1,1);\n  const lastDay=new Date(nextMonth.getFullYear(),nextMonth.getMonth()+1,0).getDate();\n  d.setFullYear(nextMonth.getFullYear(),nextMonth.getMonth(),Math.min(day,lastDay));\n }
  if(frequency==="custom")d.setMinutes(d.getMinutes()+(schedule?.intervalMinutes||60));
  return d.toISOString();
 }
