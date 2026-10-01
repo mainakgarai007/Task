@@ -70,7 +70,7 @@ function App(){
   try{
    const result=mode==="direct"?await executeDirectTask(task):await executeTaskWithAI(task,ai);
    const finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result};
-   setTasks(ts=>ts.map(t=>{if(t.id!==id)return t;const completed=t.frequency==="once" || Boolean(t.schedule?.maxRuns && t.runCount+1>=t.schedule.maxRuns);return {...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency)};}));
+   setTasks(ts=>ts.map(t=>{if(t.id!==id)return t;const completed=t.frequency==="once" || Boolean(t.schedule?.maxRuns && t.runCount+1>=t.schedule.maxRuns);return {...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)};}));
    await notify("Task completed",task.title);
   }catch(e){
    const message=e instanceof Error?e.message:"Task execution failed.",finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"failed",error:message};
