@@ -91,7 +91,7 @@ function App(){
   try{
    const result=mode==="direct"?await executeDirectTask(task):await executeTaskWithAI(task,ai);
    const finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result};
-   const normalize=(value:string)=>value.toLowerCase().replace(/\\s+/g," ").trim();
+   const normalize=(value:string)=>value.toLowerCase().replace(/\s+/g," ").trim();
    const previous=task.lastResult||"";
    const changed=normalize(previous)!==normalize(result);
    const scope=(task.action?.scope||"").toLowerCase();
@@ -165,7 +165,7 @@ function App(){
   setCreatorMode(mode);setCreator(true);setError("");
  }
  function resetManual(){
-  setManualTitle("");setManualDate(new Date().toISOString().slice(0,10));setManualTime("19:00");setManualFrequency("daily");setManualType("reminder");setManualMessage("");setManualLocation("");setWeatherSearch("");setWeatherPlaces([]);setManualWeatherCoords(null);setManualWeatherLocationMode("manual");setManualTopic("");setAnimeSearchResults([]);setSelectedAnimeId(undefined);setSelectedAnimeSource(undefined);setManualTopicPreset("Custom");setManualUrl("");setManualScope("all updates");setManualCategory("AI & tech");setManualRegion("India");setManualInterval("120");setManualEndDate("");setManualMaxRuns("");
+  setManualTitle("");setManualDate(new Date().toISOString().slice(0,10));setManualTime("19:00");setManualFrequency("daily");setManualType("reminder");setManualMessage("");setManualLocation("");setWeatherSearch("");setWeatherPlaces([]);setManualWeatherCoords(null);setManualWeatherLocationMode("manual");setManualTopic("");setAnimeSearchResults([]);setSelectedAnimeId(undefined);setSelectedAnimeSource(undefined);setManualTopicPreset("Custom");setManualUrl("");setManualScope("all updates");setManualCategory("AI & tech");setManualRegion("India");setManualInterval("120");setManualEndDate("");setManualMaxRuns("");setManualNotifyChange(false);setManualCondition("");setManualStopCondition("");
  }
  function makeManualTask(){
   setError("");
