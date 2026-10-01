@@ -1,21 +1,51 @@
 import type {Task} from "./types";
 
+type ApiCacheEntry={savedAt:number;data:any};
+const API_CACHE_PREFIX="tasks-api-cache:";
+const API_CACHE_VERSION=1;
+
+function readApiCache<T>(key:string,ttlMs:number):T|null{
+ try{
+  const raw=localStorage.getItem(API_CACHE_PREFIX+API_CACHE_VERSION+":"+key);
+  if(!raw)return null;
+  const entry=JSON.parse(raw) as ApiCacheEntry;
+  if(!entry||Date.now()-entry.savedAt>ttlMs)return null;
+  return entry.data as T;
+ }catch{return null;}
+}
+
+function writeApiCache(key:string,data:any){
+ try{localStorage.setItem(API_CACHE_PREFIX+API_CACHE_VERSION+":"+key,JSON.stringify({savedAt:Date.now(),data}));}catch{}
+}
+
+async function publicJson(url:string,init?:RequestInit,ttlMs=300000,cacheKey=url):Promise<any>{
+ const cached=readApiCache<any>(cacheKey,ttlMs);
+ if(cached!==null)return cached;
+ const response=await fetch(url,init);
+ if(!response.ok)throw new Error("Public API request failed ("+response.status+").");
+ const data=await response.json();
+ writeApiCache(cacheKey,data);
+ return data;
+}
+
+
+
 export async function fetchWeather(location:string,coords?:{latitude?:number;longitude?:number}):Promise<string>{
  const q=location.trim();
  if(!q)throw new Error("Weather location is required.");
  let lat=coords?.latitude, lon=coords?.longitude, placeName=q, state="";
  if(lat==null||lon==null){
-  const geo=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=20&language=en&format=json&countryCode=IN");
-  if(!geo.ok)throw new Error("Indian weather location lookup failed.");
-  const gd=await geo.json();
+  const geoUrl="https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=20&language=en&format=json&countryCode=IN";
+  let gd:any;
+  try{gd=await publicJson(geoUrl,undefined,86400000,"weather-geo:"+q.toLowerCase());}catch{throw new Error("Indian weather location lookup failed.");}
   const place=(gd?.results||[]).find((p:any)=>p.country_code==="IN");
   if(!place)throw new Error("Could not find an Indian city or town: "+q);
   lat=place.latitude;lon=place.longitude;placeName=place.name;state=place.admin1||"";
  }
  const url="https://api.open-meteo.com/v1/forecast?latitude="+encodeURIComponent(String(lat))+"&longitude="+encodeURIComponent(String(lon))+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl,cloud_cover,visibility,uv_index,is_day&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_probability_max,sunrise,sunset,uv_index_max&forecast_days=3&timezone=auto";
- const r=await fetch(url);
- if(!r.ok)throw new Error("Weather API failed ("+r.status+").");
- const d=await r.json(), c=d.current, day=d.daily;
+ let d:any;
+ try{d=await publicJson(url,undefined,300000,"weather:"+Number(lat).toFixed(3)+":"+Number(lon).toFixed(3));}catch(e){throw new Error(e instanceof Error?e.message:"Weather API failed.");}
+ const c=d.current, day=d.daily;
  const labels:Record<number,string>={0:"Clear",1:"Mostly clear",2:"Partly cloudy",3:"Cloudy",45:"Fog",48:"Freezing fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",80:"Rain showers",81:"Rain showers",82:"Heavy showers",95:"Thunderstorm",96:"Thunderstorm with hail",99:"Thunderstorm with hail"};
  const today=day?.time?.[0]||"";
  const hi=day?.temperature_2m_max?.[0], lo=day?.temperature_2m_min?.[0], rain=day?.precipitation_probability_max?.[0];
@@ -42,9 +72,8 @@ export function getCurrentLocation():Promise<{latitude:number;longitude:number}>
 
 export async function reverseGeocodeIndia(coords:{latitude:number;longitude:number}):Promise<{label:string;countryCode:string}>{
  const url="https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+encodeURIComponent(String(coords.latitude))+"&longitude="+encodeURIComponent(String(coords.longitude))+"&localityLanguage=en";
- const r=await fetch(url);
- if(!r.ok)throw new Error("Could not identify your current location.");
- const d=await r.json();
+ let d:any;
+ try{d=await publicJson(url,undefined,86400000,"reverse:"+Number(coords.latitude).toFixed(3)+":"+Number(coords.longitude).toFixed(3));}catch{throw new Error("Could not identify your current location.");}
  const countryCode=String(d?.countryCode||"").toUpperCase();
  if(countryCode!=="IN")throw new Error("Your current location is outside India. Weather location must be in India.");
  const place=d?.city||d?.locality||d?.principalSubdivision||"Current location";
@@ -93,19 +122,19 @@ export async function searchAnime(topic:string):Promise<{id:number;source:"anili
  const out:{id:number;source:"anilist"|"jikan";title:string;type?:string;status?:string;episodes?:number|null;season?:string|null;seasonYear?:number|null}[]=[];
  try{
   const query='query($search:String){Page(page:1,perPage:8){media(search:$search,type:ANIME,sort:SEARCH_MATCH){title{romaji english native},type,status,episodes,season,seasonYear}}}';
-  const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{search:q}})});
-  if(r.ok){
-   const d=await r.json();
+  const cacheKey="anime-search:"+q.toLowerCase();
+  const cached=readApiCache<any>(cacheKey,600000);
+  const d=cached||await (async()=>{const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{search:q}})});if(!r.ok)throw new Error();const data=await r.json();writeApiCache(cacheKey,data);return data;})();
+  if(d){
    for(const a of (d?.data?.Page?.media||[]))out.push({id:Number(a.id),source:"anilist",title:String(a.title?.english||a.title?.romaji||a.title?.native||q),type:a.type,status:a.status,episodes:a.episodes,season:a.season,seasonYear:a.seasonYear});
   }
  }catch{}
  if(out.length)return out;
  try{
-  const r=await fetch("https://api.jikan.moe/v4/anime?q="+encodeURIComponent(q)+"&limit=8&sfw=true");
-  if(r.ok){
-   const d=await r.json();
+  const jurl="https://api.jikan.moe/v4/anime?q="+encodeURIComponent(q)+"&limit=8&sfw=true";
+  try{const d=await publicJson(jurl,undefined,600000,"anime-jikan-search:"+q.toLowerCase());
    for(const a of (d?.data||[]))out.push({id:Number(a.mal_id),source:"jikan",title:String(a.title||q),type:a.type,status:a.status,episodes:a.episodes,season:a.season,seasonYear:a.year});
-  }
+  }catch{} 
  }catch{}
  return out;
 }
@@ -119,11 +148,13 @@ async function fetchAnime(topic:string,language="en",scope="all updates",animeId
   try{
    if(selected.source==="anilist"){
     const query='query($id:Int){Media(id:$id,type:ANIME){title{romaji english native},type,status,episodes,season,seasonYear,startDate{year month day},nextAiringEpisode{episode airingAt}}}';
-    const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{id:selected.id}})});
-    if(r.ok){const a=(await r.json())?.data?.Media;if(a){const title=a.title?.english||a.title?.romaji||a.title?.native||q;const next=a.nextAiringEpisode?.episode?` · Next ep ${a.nextAiringEpisode.episode}`:"";const date=a.nextAiringEpisode?.airingAt?` · ${new Date(a.nextAiringEpisode.airingAt*1000).toLocaleString("en-IN")}`:"";const season=a.seasonYear?` · ${a.season||""} ${a.seasonYear}`:"";const status=a.status?` · ${String(a.status).split("_").join(" ")}`:"";const ep=a.episodes!=null?` · ${a.episodes} eps`:"";const start=a.startDate?.year?` · Start ${a.startDate.year}-${String(a.startDate.month||1).padStart(2,"0")}-${String(a.startDate.day||1).padStart(2,"0")}`:"";lines.push(`• ${title} — ${a.type||"TV"}${status}${ep}${season}${start}${next}${date}`);}}
+    const cacheKey="anime-anilist:"+String(selected.id);
+    const payload=readApiCache<any>(cacheKey,300000)||await (async()=>{const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{id:selected.id}})});if(!r.ok)throw new Error();const data=await r.json();writeApiCache(cacheKey,data);return data;})();
+    if(payload){const a=payload?.data?.Media;if(a){const title=a.title?.english||a.title?.romaji||a.title?.native||q;const next=a.nextAiringEpisode?.episode?` · Next ep ${a.nextAiringEpisode.episode}`:"";const date=a.nextAiringEpisode?.airingAt?` · ${new Date(a.nextAiringEpisode.airingAt*1000).toLocaleString("en-IN")}`:"";const season=a.seasonYear?` · ${a.season||""} ${a.seasonYear}`:"";const status=a.status?` · ${String(a.status).split("_").join(" ")}`:"";const ep=a.episodes!=null?` · ${a.episodes} eps`:"";const start=a.startDate?.year?` · Start ${a.startDate.year}-${String(a.startDate.month||1).padStart(2,"0")}-${String(a.startDate.day||1).padStart(2,"0")}`:"";lines.push(`• ${title} — ${a.type||"TV"}${status}${ep}${season}${start}${next}${date}`);}}
    }else if(selected.source==="jikan"){
-    const r=await fetch("https://api.jikan.moe/v4/anime/"+encodeURIComponent(String(selected.id))+"/full");
-    if(r.ok){const a=(await r.json())?.data;if(a){const start=a.aired?.from?` · Start ${new Date(a.aired.from).toLocaleDateString("en-IN")}`:"";lines.push(`• ${a.title||q} — ${a.type||"Anime"} · ${a.status||"Unknown status"} · ${a.episodes??"?"} eps${a.season?` · ${a.season}`:""}${a.year?` ${a.year}`:""}${start}`);}}
+    const jurl="https://api.jikan.moe/v4/anime/"+encodeURIComponent(String(selected.id))+"/full";
+    const payload=readApiCache<any>("anime-jikan:"+String(selected.id),300000)||await publicJson(jurl,undefined,300000,"anime-jikan:"+String(selected.id));
+    if(payload){const a=payload?.data;if(a){const start=a.aired?.from?` · Start ${new Date(a.aired.from).toLocaleDateString("en-IN")}`:"";lines.push(`• ${a.title||q} — ${a.type||"Anime"} · ${a.status||"Unknown status"} · ${a.episodes??"?"} eps${a.season?` · ${a.season}`:""}${a.year?` ${a.year}`:""}${start}`);}}
    }
   }catch{}
  }
