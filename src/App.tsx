@@ -8,7 +8,7 @@ import {executeDirectTask} from "./dataSources";
 function localISO(date:Date){return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);}
 function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string,intervalMinutes=60){
  const now=new Date(), d=new Date(date+"T"+time+":00");
- if(frequency==="hourly")return new Date(Date.now()+60000).toISOString();
+ if(frequency==="hourly"){if(d>now)return d.toISOString();const next=new Date(now);next.setMinutes(d.getMinutes(),0,0);if(next<=now)next.setHours(next.getHours()+1);return next.toISOString();}
  if(frequency==="custom")return new Date(Date.now()+Math.max(1,intervalMinutes)*60000).toISOString();
  if(frequency==="daily"&&d<=now)d.setDate(d.getDate()+1);
  if(frequency==="weekly"){
@@ -141,11 +141,11 @@ function App(){
    {creatorMode==="manual"&&<><div className="sheetHead"><div><div className="eyebrow">MANUAL TASK</div><h2>Build it yourself</h2></div><button onClick={()=>setCreator(false)}>×</button></div>
     <label>Task name<input value={manualTitle} onChange={e=>setManualTitle(e.target.value)} placeholder="e.g. Morning weather"/></label>
     <div className="sectionLabel">1 · Schedule</div>
-    <div className="twoCols"><label>Time<input type="time" value={manualTime} onChange={e=>setManualTime(e.target.value)}/></label><label>Frequency<select value={manualFrequency} onChange={e=>setManualFrequency(e.target.value as Frequency)}><option value="once">Once</option><option value="hourly">Every hour</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="custom">Custom interval</option></select></label></div>
-    {manualFrequency!=="hourly"&&<label>{manualFrequency==="once"?"Date":"Start date"}<input type="date" value={manualDate} onChange={e=>setManualDate(e.target.value)}/></label>}
+    <div className="twoCols"><label>Time<input type="time" value={manualTime} onChange={e=>setManualTime(e.target.value)}/></label><label>Frequency<select value={manualFrequency} onChange={e=>setManualFrequency(e.target.value as Frequency)}><option value="once">Once</option><option value="hourly">Every hour</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="custom">Every X minutes</option></select></label></div>
+    <label>{manualFrequency==="once"?"Date":"Start date"}<input type="date" value={manualDate} onChange={e=>setManualDate(e.target.value)}/></label>
     {manualFrequency==="weekly"&&<label>Day<select value={manualWeekday} onChange={e=>setManualWeekday(e.target.value)}><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select></label>}
     {manualFrequency==="monthly"&&<label>Day of month<input type="number" min="1" max="31" value={manualMonthDay} onChange={e=>setManualMonthDay(e.target.value)}/></label>}
-    {manualFrequency==="custom"&&<label>Run every (minutes)<input type="number" min="1" value={manualInterval} onChange={e=>setManualInterval(e.target.value)}/></label>}
+    {manualFrequency==="custom"&&<label>Every (minutes)<input type="number" min="1" value={manualInterval} onChange={e=>setManualInterval(e.target.value)} placeholder="e.g. 30"/></label>}
     {manualFrequency!=="once"&&<div className="twoCols"><label>End date (optional)<input type="date" value={manualEndDate} onChange={e=>setManualEndDate(e.target.value)}/></label><label>Max runs (optional)<input type="number" min="1" value={manualMaxRuns} onChange={e=>setManualMaxRuns(e.target.value)} placeholder="Unlimited"/></label></div>
     <div className="sectionLabel">2 · Action</div>
     <label>Action<select value={manualType} onChange={e=>setManualType(e.target.value as any)}><option value="reminder">🔔 Reminder</option><option value="weather">🌤️ Weather</option><option value="news">📰 News</option><option value="anime">🍿 Anime</option><option value="movie">🎬 Movies</option><option value="web">🌐 Website / RSS</option></select></label>
