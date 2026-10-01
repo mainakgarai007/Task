@@ -19,6 +19,7 @@ function App(){
  const [models,setModels]=useState<AIModel[]>([]);
  const [modelsBusy,setModelsBusy]=useState(false);
  const [running,setRunning]=useState<string|null>(null);
+ const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
 
  useEffect(()=>saveTasks(tasks),[tasks]);
 
@@ -57,8 +58,6 @@ function App(){
  },[tasks,ai,aiReady,running]);
 
  const visible=useMemo(()=>tasks.filter(t=>filter==="all"||(filter==="active"&&t.enabled)||(filter==="paused"&&!t.enabled)),[tasks,filter]);
- const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
-
  function openComposer(text=""){
   setRequest(text);
   setError("");
