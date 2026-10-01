@@ -87,6 +87,29 @@ async function fetchRss(query:string,language="en"):Promise<string>{
  return items.map((x,i)=>`${i+1}. ${x.title} — ${x.source}`).join("\n");
 }
 
+export async function searchAnime(topic:string):Promise<{title:string;type?:string;status?:string;episodes?:number|null;season?:string|null;seasonYear?:number|null}[]>{
+ const q=topic.trim();
+ if(!q)return [];
+ const out:{title:string;type?:string;status?:string;episodes?:number|null;season?:string|null;seasonYear?:number|null}[]=[];
+ try{
+  const query='query($search:String){Page(page:1,perPage:8){media(search:$search,type:ANIME,sort:SEARCH_MATCH){title{romaji english native},type,status,episodes,season,seasonYear}}}';
+  const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{search:q}})});
+  if(r.ok){
+   const d=await r.json();
+   for(const a of (d?.data?.Page?.media||[]))out.push({title:String(a.title?.english||a.title?.romaji||a.title?.native||q),type:a.type,status:a.status,episodes:a.episodes,season:a.season,seasonYear:a.seasonYear});
+  }
+ }catch{}
+ if(out.length)return out;
+ try{
+  const r=await fetch("https://api.jikan.moe/v4/anime?q="+encodeURIComponent(q)+"&limit=8&sfw=true");
+  if(r.ok){
+   const d=await r.json();
+   for(const a of (d?.data||[]))out.push({title:String(a.title||q),type:a.type,status:a.status,episodes:a.episodes,season:a.season,seasonYear:a.year});
+  }
+ }catch{}
+ return out;
+}
+
 async function fetchAnime(topic:string,language="en",scope="all updates"):Promise<string>{
  const q=topic.trim();
  if(!q)throw new Error("Anime title/topic is required.");
