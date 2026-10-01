@@ -12,7 +12,7 @@ export async function fetchWeather(location:string,coords?:{latitude?:number;lon
   if(!place)throw new Error("Could not find an Indian city or town: "+q);
   lat=place.latitude;lon=place.longitude;placeName=place.name;state=place.admin1||"";
  }
- const url="https://api.open-meteo.com/v1/forecast?latitude="+encodeURIComponent(lat)+"&longitude="+encodeURIComponent(lon)+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl,cloud_cover,visibility,uv_index,is_day&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_probability_max,sunrise,sunset,uv_index_max&forecast_days=3&timezone=auto";
+ const url="https://api.open-meteo.com/v1/forecast?latitude="+encodeURIComponent(String(lat))+"&longitude="+encodeURIComponent(String(lon))+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl,cloud_cover,visibility,uv_index,is_day&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_probability_max,sunrise,sunset,uv_index_max&forecast_days=3&timezone=auto";
  const r=await fetch(url);
  if(!r.ok)throw new Error("Weather API failed ("+r.status+").");
  const d=await r.json(), c=d.current, day=d.daily;
