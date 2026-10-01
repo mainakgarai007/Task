@@ -168,3 +168,7 @@ Build a genuinely customizable, free-first task automation tool where a user can
 **When → What → Where → Conditions → What happens next**
 
 without requiring a paid backend.
+
+
+### Public API runtime rule
+API-backed tasks use public APIs at runtime for fresh data; search and execution are not limited to hardcoded lists. When a primary public source is unavailable, supported fallback sources are used.
