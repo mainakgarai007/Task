@@ -1,7 +1,17 @@
-export type Frequency="once"|"hourly"|"daily"|"weekly"|"monthly";
+export type Frequency="once"|"hourly"|"daily"|"weekly"|"monthly"|"custom";
 export type TaskStatus="active"|"paused"|"completed"|"failed";
 export type ExecutionMode="direct"|"ai";
-export type ActionType="reminder"|"weather"|"news"|"web"|"ai";
+export type ActionType="reminder"|"weather"|"news"|"anime"|"movie"|"web"|"ai";
+
+export interface TaskSchedule{
+ time:string;
+ startDate?:string;
+ endDate?:string;
+ weekday?:number;
+ monthDay?:number;
+ intervalMinutes?:number;
+ maxRuns?:number;
+}
 
 export interface TaskAction{
  type:ActionType;
@@ -10,6 +20,9 @@ export interface TaskAction{
  topic?:string;
  language?:string;
  url?:string;
+ scope?:string;
+ region?:string;
+ category?:string;
 }
 
 export interface ExecutionRecord{
@@ -21,9 +34,9 @@ export interface Task{
  id:string;title:string;prompt:string;frequency:Frequency;nextRun:string;enabled:boolean;status:TaskStatus;
  createdAt:string;lastRun?:string;runCount:number;history:string[];executions?:ExecutionRecord[];
  lastResult?:string;previousResult?:string;lastError?:string;
- executionMode:ExecutionMode;action:TaskAction;
+ executionMode:ExecutionMode;action:TaskAction;schedule?:TaskSchedule;
 }
 
 export const frequencyLabels:Record<Frequency,string>={
- once:"Once",hourly:"Every hour",daily:"Every day",weekly:"Every week",monthly:"Every month"
+ once:"Once",hourly:"Every hour",daily:"Every day",weekly:"Every week",monthly:"Every month",custom:"Custom interval"
 };
