@@ -17,6 +17,8 @@ export interface TaskAction{
  type:ActionType;
  message?:string;
  location?:string;
+ latitude?:number;
+ longitude?:number;
  topic?:string;
  language?:string;
  url?:string;
