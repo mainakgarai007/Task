@@ -17,6 +17,7 @@ export function normalizeTasks(value:unknown):Task[]{
   const action=isRecord(item.action)?item.action as TaskAction:{type:"reminder" as const,message:typeof item.prompt==="string"?item.prompt:""};
   const safeAction:TaskAction={...action,type:["reminder","weather","news","anime","movie","web","ai"].includes(action.type)?action.type:"reminder"};
   const schedule=isRecord(item.schedule)?item.schedule as TaskSchedule:undefined;
+  const executionState=item.executionState==="running"||item.executionState==="waiting"?item.executionState:"idle";
   return {
    ...item,
    prompt:typeof item.prompt==="string"?item.prompt:"",
@@ -26,7 +27,9 @@ export function normalizeTasks(value:unknown):Task[]{
    history:Array.isArray(item.history)?item.history.filter((x:any)=>typeof x==="string"):[],
    executions:Array.isArray(item.executions)?item.executions:[],
    action:safeAction,
-   schedule
+   schedule,
+   executionState,
+   waitingReason:typeof item.waitingReason==="string"?item.waitingReason:undefined
   } as Task;
  }).filter((item):item is Task=>Boolean(item));
 }

@@ -1,5 +1,6 @@
 export type Frequency="once"|"hourly"|"daily"|"weekly"|"monthly"|"custom";
 export type TaskStatus="active"|"paused"|"completed"|"failed";
+export type ExecutionState="idle"|"running"|"waiting";
 export type ExecutionMode="direct"|"ai";
 export type ActionType="reminder"|"weather"|"news"|"anime"|"movie"|"web"|"ai";
 
@@ -43,7 +44,7 @@ export interface Task{
  id:string;title:string;prompt:string;frequency:Frequency;nextRun:string;enabled:boolean;status:TaskStatus;
  createdAt:string;lastRun?:string;runCount:number;history:string[];executions?:ExecutionRecord[];
  lastResult?:string;previousResult?:string;lastError?:string;
- executionMode:ExecutionMode;action:TaskAction;schedule?:TaskSchedule;
+ executionMode:ExecutionMode;action:TaskAction;schedule?:TaskSchedule;executionState?:ExecutionState;waitingReason?:string;
 }
 
 export const frequencyLabels:Record<Frequency,string>={

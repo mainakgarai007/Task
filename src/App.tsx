@@ -85,11 +85,16 @@ function App(){
 
  async function executeTask(id:string){
   if(executionLocks.current.has(id))return;
-  const task=tasks.find(x=>x.id===id);if(!task||!task.enabled||task.status==="completed")return;
+  const task=tasks.find(x=>x.id===id);if(!task||!task.enabled||task.status==="completed"||task.executionState==="running")return;
   executionLocks.current.add(id);
   const mode=task.executionMode||"ai";
-  if(mode==="ai"&&!aiReady){setError("AI settings are required for this AI task.");setDraftAi(ai);setSettingsOpen(true);return;}
-  setRunning(id);const started=new Date().toISOString();
+  if(mode==="ai"&&!aiReady){
+   executionLocks.current.delete(id);
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,executionState:"waiting",waitingReason:"AI settings are required"}:t));
+   setError("AI settings are required for this AI task.");setDraftAi(ai);setSettingsOpen(true);return;
+  }
+  setRunning(id);setTasks(ts=>ts.map(t=>t.id===id?{...t,executionState:"running",waitingReason:undefined}:t));
+  const started=new Date().toISOString();
   try{
    const result=mode==="direct"?await executeDirectTask(task):await executeTaskWithAI(task,ai);
    const finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result};
@@ -101,11 +106,11 @@ function App(){
    const conditionOk=!task.action?.condition||normalize(result).includes(normalize(task.action.condition));
    const stopHit=Boolean(task.action?.stopCondition&&normalize(result).includes(normalize(task.action.stopCondition)));
    const completed=task.frequency==="once" || stopHit || Boolean(task.schedule?.maxRuns && task.runCount+1>=task.schedule.maxRuns) || Boolean(task.schedule?.endDate && new Date(finished).toISOString().slice(0,10)>task.schedule.endDate);
-   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
    if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))) await notify("Task completed",task.title+"\n"+result.slice(0,300));
   }catch(e){
    const message=e instanceof Error?e.message:"Task execution failed.",finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"failed",error:message};
-   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,status:t.frequency==="once"?"failed":"active",nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,executionState:"idle",waitingReason:undefined,status:t.frequency==="once"?"failed":"active",nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
    await notify("Task failed",task.title);
   }finally{executionLocks.current.delete(id);setRunning(null);}
  }
@@ -187,11 +192,11 @@ function App(){
   const firstRun=buildFirstRun(manualDate,manualTime,manualFrequency,manualWeekday,manualMonthDay,Number(manualInterval));
   const existing=editingId?tasks.find(t=>t.id===editingId):undefined;
   if(existing){
-   const updated:Task={...existing,title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",action,schedule,lastError:undefined};
+   const updated:Task={...existing,title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",executionState:"idle",waitingReason:undefined,action,schedule,lastError:undefined};
    setTasks(prev=>prev.map(t=>t.id===existing.id?updated:t));
    notify("Task updated",updated.title);
   }else{
-   const task:Task={id:uid(),title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",createdAt:new Date().toISOString(),runCount:0,history:[],executionMode:"direct",action,schedule};
+   const task:Task={id:uid(),title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",executionState:"idle",createdAt:new Date().toISOString(),runCount:0,history:[],executionMode:"direct",action,schedule};
    setTasks(prev=>[task,...prev]);
    notify("Task created",task.title);
   }
@@ -216,9 +221,9 @@ function App(){
 
   {visible.length===0?<section className="empty"><div className="orb">✦</div><h2>What should I schedule?</h2><p>Create a task manually with no AI at run time, or let AI build a smart task from your words.</p><div className="emptyButtons"><button className="secondary wide" onClick={()=>openCreator("manual")}>＋ Manual task</button><button className="primary wide" onClick={()=>openCreator("ai")}>✨ AI task</button></div></section>:
    <main>{visible.map(t=><article className="card" key={t.id}>
-    <div className="cardTop"><span className={"dot "+(t.enabled?"live":"paused")}></span><span>{t.enabled?"ACTIVE":t.status.toUpperCase()}</span><span className="modeBadge">{t.executionMode==="direct"?"DIRECT":"AI"}</span><button className="more editBtn" onClick={()=>openEdit(t)}>Edit</button><button className="more deleteBtn" onClick={()=>setDeleteTarget(t)}>Delete</button></div>
-    <h2>{t.title}</h2><p>{t.prompt}</p><div className="meta"><span>{frequencyLabels[t.frequency]}</span><span>Next · {new Date(t.nextRun).toLocaleString()}</span><span>Runs · {t.runCount}</span></div>{t.lastError&&<div className="error">{t.lastError}</div>}{t.lastResult&&<div className="resultPreview"><strong>Latest result</strong><p>{t.lastResult}</p></div>}
-    <div className="actions"><button onClick={()=>setHistoryTarget(t)}>History</button><button onClick={()=>setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:!x.enabled,status:x.enabled?"paused":"active"}:x))}>{t.enabled?"Pause":"Resume"}</button><button disabled={running===t.id} onClick={()=>executeTask(t.id)}>{running===t.id?"Running…":"Run now"}</button></div>
+    <div className="cardTop"><span className={"dot "+(t.executionState==="running"?"live":t.enabled?"live":"paused")}></span><span>{t.executionState==="running"?"RUNNING":t.executionState==="waiting"?"WAITING":t.enabled?"ACTIVE":t.status.toUpperCase()}</span><span className="modeBadge">{t.executionMode==="direct"?"DIRECT":"AI"}</span><button className="more editBtn" onClick={()=>openEdit(t)}>Edit</button><button className="more deleteBtn" onClick={()=>setDeleteTarget(t)}>Delete</button></div>
+    <h2>{t.title}</h2><p>{t.prompt}</p><div className="meta"><span>{frequencyLabels[t.frequency]}</span><span>Next · {new Date(t.nextRun).toLocaleString()}</span><span>Runs · {t.runCount}</span>{t.executionState==="waiting"&&<span>Waiting · {t.waitingReason||"Waiting"}</span>}</div>{t.lastError&&<div className="error">{t.lastError}</div>}{t.lastResult&&<div className="resultPreview"><strong>Latest result</strong><p>{t.lastResult}</p></div>}
+    <div className="actions"><button onClick={()=>setHistoryTarget(t)}>History</button><button onClick={()=>setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:!x.enabled,status:x.enabled?"paused":"active"}:x))}>{t.enabled?"Pause":"Resume"}</button><button disabled={running===t.id||t.executionState==="waiting"} onClick={()=>executeTask(t.id)}>{running===t.id?"Running…":t.executionState==="waiting"?"Waiting…":"Run now"}</button></div>
    </article>)}</main>}
 
   <section className="starter"><h3>Quick create</h3><div className="backupBar"><button onClick={()=>{const blob=new Blob([JSON.stringify(tasks,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-backup.json";a.click();URL.revokeObjectURL(a.href)}}>Export backup</button><button onClick={()=>{const input=document.createElement("input");input.type="file";input.accept="application/json";input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data))throw new Error("Invalid backup file.");const valid=normalizeTasks(data);setTasks(valid);setError(valid.length===data.length?"Backup restored.":`Restored ${valid.length} valid tasks.`);}catch(e){setError(e instanceof Error?e.message:"Could not restore backup.");}};input.click()}}>Import backup</button></div><div className="starterGrid"><button onClick={()=>openCreator("manual")}>🛠️<b>Manual task</b><small>Choose time + action yourself</small></button><button onClick={()=>{openCreator("ai");setRequest("Every morning at 7 AM, give me today's weather details for my city.")}}>✨<b>AI task</b><small>Describe what you want</small></button></div></section>

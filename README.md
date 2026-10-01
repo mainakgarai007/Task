@@ -17,6 +17,7 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Run now
 - Multiple tasks
 - Active / paused / completed / failed states
+- Running / waiting execution state with a clear waiting reason
 - Execution history and error logs
 - Previous-result memory
 - JSON backup export/import
@@ -36,6 +37,7 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Automatic stop when a stop condition is reached
 - Missed scheduled runs are detected when the browser scheduler wakes up
 - Each task is execution-locked so the same task cannot start twice concurrently
+- Tasks waiting for required AI configuration are not executed until the requirement is available
 
 ### Smart automation
 - Direct execution for supported public-data tasks
