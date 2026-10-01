@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from "react";
 import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule} from "./types";
-import {loadTasks,saveTasks,uid} from "./storage";
+import {loadTasks,saveTasks,uid,normalizeTasks} from "./storage";
 import {nextRun,notify} from "./scheduler";
 import {createTaskWithAI,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel,executeTaskWithAI} from "./ai";
 import {executeDirectTask,getCurrentLocation,reverseGeocodeIndia,searchAnime} from "./dataSources";
@@ -161,7 +161,7 @@ function App(){
   setDeleteTarget(null);
  }
  function openCreator(mode:"choose"|"manual"|"ai"="choose"){
-  if(mode==="manual")setEditingId(null);
+  if(mode==="manual"){setEditingId(null);resetManual();}
   setCreatorMode(mode);setCreator(true);setError("");
  }
  function resetManual(){
@@ -219,10 +219,10 @@ function App(){
     <div className="actions"><button onClick={()=>setHistoryTarget(t)}>History</button><button onClick={()=>setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:!x.enabled,status:x.enabled?"paused":"active"}:x))}>{t.enabled?"Pause":"Resume"}</button><button disabled={running===t.id} onClick={()=>executeTask(t.id)}>{running===t.id?"Running…":"Run now"}</button></div>
    </article>)}</main>}
 
-  <section className="starter"><h3>Quick create</h3><div className="backupBar"><button onClick={()=>{const blob=new Blob([JSON.stringify(tasks,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-backup.json";a.click();URL.revokeObjectURL(a.href)}}>Export backup</button><button onClick={()=>{const input=document.createElement("input");input.type="file";input.accept="application/json";input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data))throw new Error("Invalid backup file.");const valid=data.filter(x=>x&&typeof x.id==="string"&&typeof x.title==="string"&&typeof x.nextRun==="string");setTasks(valid);setError(valid.length===data.length?"Backup restored.":`Restored ${valid.length} valid tasks.`);}catch(e){setError(e instanceof Error?e.message:"Could not restore backup.");}};input.click()}}>Import backup</button></div><div className="starterGrid"><button onClick={()=>openCreator("manual")}>🛠️<b>Manual task</b><small>Choose time + action yourself</small></button><button onClick={()=>{openCreator("ai");setRequest("Every morning at 7 AM, give me today's weather details for my city.")}}>✨<b>AI task</b><small>Describe what you want</small></button></div></section>
+  <section className="starter"><h3>Quick create</h3><div className="backupBar"><button onClick={()=>{const blob=new Blob([JSON.stringify(tasks,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-backup.json";a.click();URL.revokeObjectURL(a.href)}}>Export backup</button><button onClick={()=>{const input=document.createElement("input");input.type="file";input.accept="application/json";input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data))throw new Error("Invalid backup file.");const valid=normalizeTasks(data);setTasks(valid);setError(valid.length===data.length?"Backup restored.":`Restored ${valid.length} valid tasks.`);}catch(e){setError(e instanceof Error?e.message:"Could not restore backup.");}};input.click()}}>Import backup</button></div><div className="starterGrid"><button onClick={()=>openCreator("manual")}>🛠️<b>Manual task</b><small>Choose time + action yourself</small></button><button onClick={()=>{openCreator("ai");setRequest("Every morning at 7 AM, give me today's weather details for my city.")}}>✨<b>AI task</b><small>Describe what you want</small></button></div></section>
 
   {creator&&<div className="modal"><div className="sheet creatorSheet">
-   {creatorMode==="choose"&&<><div className="sheetHead"><div><div className="eyebrow">CREATE TASK</div><h2>How do you want to create it?</h2></div><button onClick={()=>setCreator(false)}>×</button></div><div className="modeCards"><button onClick={()=>setCreatorMode("manual")}><span>🛠️</span><b>Manual task</b><small>Pick the schedule and action yourself. Direct APIs run it without AI.</small></button><button onClick={()=>setCreatorMode("ai")}><span>✨</span><b>AI task</b><small>Describe it naturally. AI creates the task plan and chooses direct APIs when possible.</small></button></div></>}
+   {creatorMode==="choose"&&<><div className="sheetHead"><div><div className="eyebrow">CREATE TASK</div><h2>How do you want to create it?</h2></div><button onClick={()=>setCreator(false)}>×</button></div><div className="modeCards"><button onClick={()=>openCreator("manual")}><span>🛠️</span><b>Manual task</b><small>Pick the schedule and action yourself. Direct APIs run it without AI.</small></button><button onClick={()=>setCreatorMode("ai")}><span>✨</span><b>AI task</b><small>Describe it naturally. AI creates the task plan and chooses direct APIs when possible.</small></button></div></>}
    {creatorMode==="manual"&&<><div className="sheetHead"><div><div className="eyebrow">{editingId?"EDIT TASK":"MANUAL TASK"}</div><h2>{editingId?"Edit task":"Build it yourself"}</h2></div><button onClick={()=>{setCreator(false);setEditingId(null)}}>×</button></div>
     <label>Task name<input value={manualTitle} onChange={e=>setManualTitle(e.target.value)} placeholder="e.g. Morning weather"/></label>
     <div className="sectionLabel">1 · Schedule</div>

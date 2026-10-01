@@ -142,7 +142,7 @@ export async function searchAnime(topic:string):Promise<{id:number;source:"anili
 async function fetchAnime(topic:string,language="en",scope="all updates",animeId?:number,animeSource?:"anilist"|"jikan"):Promise<string>{
  const q=topic.trim();
  if(!q)throw new Error("Anime title/topic is required.");
- const selected=animeId?{id:animeId,source:animeSource}:((await searchAnime(q))[0]);
+ const selected=animeId?{id:animeId,source:animeSource||"anilist"}:((await searchAnime(q))[0]);
  const lines:string[]=[];
  if(selected?.id){
   try{
@@ -150,46 +150,34 @@ async function fetchAnime(topic:string,language="en",scope="all updates",animeId
     const query='query($id:Int){Media(id:$id,type:ANIME){title{romaji english native},type,status,episodes,season,seasonYear,startDate{year month day},nextAiringEpisode{episode airingAt}}}';
     const cacheKey="anime-anilist:"+String(selected.id);
     const payload=readApiCache<any>(cacheKey,300000)||await (async()=>{const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{id:selected.id}})});if(!r.ok)throw new Error();const data=await r.json();writeApiCache(cacheKey,data);return data;})();
-    if(payload){const a=payload?.data?.Media;if(a){const title=a.title?.english||a.title?.romaji||a.title?.native||q;const next=a.nextAiringEpisode?.episode?` · Next ep ${a.nextAiringEpisode.episode}`:"";const date=a.nextAiringEpisode?.airingAt?` · ${new Date(a.nextAiringEpisode.airingAt*1000).toLocaleString("en-IN")}`:"";const season=a.seasonYear?` · ${a.season||""} ${a.seasonYear}`:"";const status=a.status?` · ${String(a.status).split("_").join(" ")}`:"";const ep=a.episodes!=null?` · ${a.episodes} eps`:"";const start=a.startDate?.year?` · Start ${a.startDate.year}-${String(a.startDate.month||1).padStart(2,"0")}-${String(a.startDate.day||1).padStart(2,"0")}`:"";lines.push(`• ${title} — ${a.type||"TV"}${status}${ep}${season}${start}${next}${date}`);}}
-   }else if(selected.source==="jikan"){
+    const a=payload?.data?.Media;
+    if(a){
+     const title=a.title?.english||a.title?.romaji||a.title?.native||q;
+     const next=a.nextAiringEpisode?.episode?` · Next ep ${a.nextAiringEpisode.episode}`:"";
+     const date=a.nextAiringEpisode?.airingAt?` · ${new Date(a.nextAiringEpisode.airingAt*1000).toLocaleString("en-IN")}`:"";
+     const season=a.seasonYear?` · ${a.season||""} ${a.seasonYear}`:"";
+     const status=a.status?` · ${String(a.status).split("_").join(" ")}`:"";
+     const ep=a.episodes!=null?` · ${a.episodes} eps`:"";
+     const startDate=a.startDate?.year?` · Start ${a.startDate.year}-${String(a.startDate.month||1).padStart(2,"0")}-${String(a.startDate.day||1).padStart(2,"0")}`:"";
+     lines.push(`• ${title} — ${a.type||"TV"}${status}${ep}${season}${startDate}${next}${date}`);
+    }
+   }else{
     const jurl="https://api.jikan.moe/v4/anime/"+encodeURIComponent(String(selected.id))+"/full";
     const payload=readApiCache<any>("anime-jikan:"+String(selected.id),300000)||await publicJson(jurl,undefined,300000,"anime-jikan:"+String(selected.id));
-    if(payload){const a=payload?.data;if(a){const start=a.aired?.from?` · Start ${new Date(a.aired.from).toLocaleDateString("en-IN")}`:"";lines.push(`• ${a.title||q} — ${a.type||"Anime"} · ${a.status||"Unknown status"} · ${a.episodes??"?"} eps${a.season?` · ${a.season}`:""}${a.year?` ${a.year}`:""}${start}`);}}
+    const a=payload?.data;
+    if(a){
+     const startDate=a.aired?.from?` · Start ${new Date(a.aired.from).toLocaleDateString("en-IN")}`:"";
+     lines.push(`• ${a.title||q} — ${a.type||"Anime"} · ${a.status||"Unknown status"} · ${a.episodes??"?"} eps${a.season?` · ${a.season}`:""}${a.year?` ${a.year}`:""}${startDate}`);
+    }
    }
   }catch{}
  }
- try{
-  const query='query($search:String){Page(page:1,perPage:5){media(search:$search,type:ANIME,sort:SEARCH_MATCH){id,title{romaji english native},type,status,episodes,season,seasonYear,startDate{year month day},nextAiringEpisode{episode airingAt},siteUrl}}}';
-  const ar=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{search:q}})});
-  if(ar.ok){
-   const data=await ar.json();
-   for(const a of (data?.data?.Page?.media||[])){
-    const title=a.title?.english||a.title?.romaji||a.title?.native||q;
-    const next=a.nextAiringEpisode?.episode?` · Next ep ${a.nextAiringEpisode.episode}`:"";
-    const date=a.nextAiringEpisode?.airingAt?` · ${new Date(a.nextAiringEpisode.airingAt*1000).toLocaleString("en-IN")}`:"";
-    const status=a.status?` · ${a.status.replaceAll("_"," ")}`:"";
-    const season=a.seasonYear?` · ${a.season||""} ${a.seasonYear}`:"";
-    const ep=a.episodes!=null?` · ${a.episodes} eps`:"";
-    lines.push(`• ${title} — ${a.type||"TV"}${status}${ep}${season}${next}${date}`);
-   }
-  }
- }catch{}
- try{
-  const response=await fetch("https://api.jikan.moe/v4/anime?q="+encodeURIComponent(q)+"&limit=5&sfw=true");
-  if(response.ok){
-   const data=await response.json();
-   for(const a of (data?.data||[]).slice(0,5)){
-    const score=a.score!=null?` · Score ${a.score}`:"";
-    const aired=a.aired?.from?` · Start ${new Date(a.aired.from).toLocaleDateString("en-IN")}`:"";
-    lines.push(`• ${a.title||q} — ${a.type||"Anime"} · ${a.status||"Unknown status"} · ${a.episodes??"?"} eps${score}${aired}`);
-   }
-  }
- }catch{}
  const unique=[...new Set(lines)];
- if(scope==="new episode")return unique.filter(x=>/Next ep|airing/i.test(x)).slice(0,8).join("\n")||"No upcoming episode data found right now.";
- if(scope==="new season")return unique.filter(x=>/season|winter|spring|summer|fall/i.test(x)).slice(0,8).join("\n")||"No season update data found right now.";
- if(scope==="release date")return unique.filter(x=>/Start|Next ep|season/i.test(x)).slice(0,8).join("\n")||"No release-date data found right now.";
- if(unique.length)return unique.slice(0,8).join("\n");
+ let filtered=unique;
+ if(scope==="new episode")filtered=unique.filter(x=>/Next ep|airing/i.test(x));
+ if(scope==="new season")filtered=unique.filter(x=>/season|winter|spring|summer|fall/i.test(x));
+ if(scope==="release date")filtered=unique.filter(x=>/Start|Next ep|season/i.test(x));
+ if(filtered.length)return filtered.slice(0,8).join("\n");
  return fetchRss("anime "+q+" "+scope,language);
 }
 export async function fetchNews(topic:string,language="en"):Promise<string>{
