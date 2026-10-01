@@ -87,16 +87,16 @@ async function fetchRss(query:string,language="en"):Promise<string>{
  return items.map((x,i)=>`${i+1}. ${x.title} — ${x.source}`).join("\n");
 }
 
-export async function searchAnime(topic:string):Promise<{title:string;type?:string;status?:string;episodes?:number|null;season?:string|null;seasonYear?:number|null}[]>{
+export async function searchAnime(topic:string):Promise<{id:number;source:"anilist"|"jikan";title:string;type?:string;status?:string;episodes?:number|null;season?:string|null;seasonYear?:number|null}[]>{
  const q=topic.trim();
  if(!q)return [];
- const out:{title:string;type?:string;status?:string;episodes?:number|null;season?:string|null;seasonYear?:number|null}[]=[];
+ const out:{id:number;source:"anilist"|"jikan";title:string;type?:string;status?:string;episodes?:number|null;season?:string|null;seasonYear?:number|null}[]=[];
  try{
   const query='query($search:String){Page(page:1,perPage:8){media(search:$search,type:ANIME,sort:SEARCH_MATCH){title{romaji english native},type,status,episodes,season,seasonYear}}}';
   const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{search:q}})});
   if(r.ok){
    const d=await r.json();
-   for(const a of (d?.data?.Page?.media||[]))out.push({title:String(a.title?.english||a.title?.romaji||a.title?.native||q),type:a.type,status:a.status,episodes:a.episodes,season:a.season,seasonYear:a.seasonYear});
+   for(const a of (d?.data?.Page?.media||[]))out.push({id:Number(a.id),source:"anilist",title:String(a.title?.english||a.title?.romaji||a.title?.native||q),type:a.type,status:a.status,episodes:a.episodes,season:a.season,seasonYear:a.seasonYear});
   }
  }catch{}
  if(out.length)return out;
@@ -104,16 +104,29 @@ export async function searchAnime(topic:string):Promise<{title:string;type?:stri
   const r=await fetch("https://api.jikan.moe/v4/anime?q="+encodeURIComponent(q)+"&limit=8&sfw=true");
   if(r.ok){
    const d=await r.json();
-   for(const a of (d?.data||[]))out.push({title:String(a.title||q),type:a.type,status:a.status,episodes:a.episodes,season:a.season,seasonYear:a.year});
+   for(const a of (d?.data||[]))out.push({id:Number(a.mal_id),source:"jikan",title:String(a.title||q),type:a.type,status:a.status,episodes:a.episodes,season:a.season,seasonYear:a.year});
   }
  }catch{}
  return out;
 }
 
-async function fetchAnime(topic:string,language="en",scope="all updates"):Promise<string>{
+async function fetchAnime(topic:string,language="en",scope="all updates",animeId?:number,animeSource?:"anilist"|"jikan"):Promise<string>{
  const q=topic.trim();
  if(!q)throw new Error("Anime title/topic is required.");
+ const selected=animeId?{id:animeId,source:animeSource}:((await searchAnime(q))[0]);
  const lines:string[]=[];
+ if(selected?.id){
+  try{
+   if(selected.source==="anilist"){
+    const query='query($id:Int){Media(id:$id,type:ANIME){title{romaji english native},type,status,episodes,season,seasonYear,startDate{year month day},nextAiringEpisode{episode airingAt}}}';
+    const r=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{id:selected.id}})});
+    if(r.ok){const a=(await r.json())?.data?.Media;if(a){const title=a.title?.english||a.title?.romaji||a.title?.native||q;const next=a.nextAiringEpisode?.episode?` · Next ep ${a.nextAiringEpisode.episode}`:"";const date=a.nextAiringEpisode?.airingAt?` · ${new Date(a.nextAiringEpisode.airingAt*1000).toLocaleString("en-IN")}`:"";const season=a.seasonYear?` · ${a.season||""} ${a.seasonYear}`:"";const status=a.status?` · ${String(a.status).replaceAll("_"," ")}`:"";const ep=a.episodes!=null?` · ${a.episodes} eps`:"";const start=a.startDate?.year?` · Start ${a.startDate.year}-${String(a.startDate.month||1).padStart(2,"0")}-${String(a.startDate.day||1).padStart(2,"0")}`:"";lines.push(`• ${title} — ${a.type||"TV"}${status}${ep}${season}${start}${next}${date}`);}}
+   }else if(selected.source==="jikan"){
+    const r=await fetch("https://api.jikan.moe/v4/anime/"+encodeURIComponent(String(selected.id))+"/full");
+    if(r.ok){const a=(await r.json())?.data;if(a){const start=a.aired?.from?` · Start ${new Date(a.aired.from).toLocaleDateString("en-IN")}`:"";lines.push(`• ${a.title||q} — ${a.type||"Anime"} · ${a.status||"Unknown status"} · ${a.episodes??"?"} eps${a.season?` · ${a.season}`:""}${a.year?` ${a.year}`:""}${start}`);}}
+   }
+  }catch{}
+ }
  try{
   const query='query($search:String){Page(page:1,perPage:5){media(search:$search,type:ANIME,sort:SEARCH_MATCH){id,title{romaji english native},type,status,episodes,season,seasonYear,startDate{year month day},nextAiringEpisode{episode airingAt},siteUrl}}}';
   const ar=await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query,variables:{search:q}})});
@@ -172,7 +185,7 @@ export async function executeDirectTask(task:Task):Promise<string>{
  if(!a)return task.prompt;
  if(a.type==="reminder")return a.message||task.prompt;
  if(a.type==="weather"){if(a.locationMode==="auto-live"){const live=await resolveAutoWeatherLocation("auto-live");return await fetchWeather(live.label,{latitude:live.latitude,longitude:live.longitude});}return await fetchWeather(a.location||"Current location",{latitude:a.latitude,longitude:a.longitude});}
- if(a.type==="anime")return await fetchAnime(a.topic||task.prompt,a.language||"en",a.scope||"all updates");
+ if(a.type==="anime")return await fetchAnime(a.topic||task.prompt,a.language||"en",a.scope||"all updates",a.animeId,a.animeSource);
  if(a.type==="news"||a.type==="movie"){const prefix=a.type==="movie"?"movie ":"";const scope=a.scope?" "+a.scope:"";return await fetchNews(prefix+(a.topic||task.prompt)+scope,a.language||"en");}
  if(a.type==="web")return await fetchWebUpdate(a.url||"");
  return task.prompt;
