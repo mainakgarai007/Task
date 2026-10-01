@@ -1,19 +1,32 @@
 import type {Task} from "./types";
 
-export async function fetchWeather(location:string):Promise<string>{
+export async function fetchWeather(location:string,coords?:{latitude?:number;longitude?:number}):Promise<string>{
  const q=location.trim();
  if(!q)throw new Error("Weather location is required.");
- const geo=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=1&language=en&format=json");
- if(!geo.ok)throw new Error("Weather location lookup failed.");
- const gd=await geo.json();
- const place=gd?.results?.[0];
- if(!place)throw new Error("Could not find weather location: "+q);
- const url="https://api.open-meteo.com/v1/forecast?latitude="+encodeURIComponent(place.latitude)+"&longitude="+encodeURIComponent(place.longitude)+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto";
+ let lat=coords?.latitude, lon=coords?.longitude, placeName=q, state="";
+ if(lat==null||lon==null){
+  const geo=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=20&language=en&format=json&countryCode=IN");
+  if(!geo.ok)throw new Error("Indian weather location lookup failed.");
+  const gd=await geo.json();
+  const place=(gd?.results||[]).find((p:any)=>p.country_code==="IN");
+  if(!place)throw new Error("Could not find an Indian city or town: "+q);
+  lat=place.latitude;lon=place.longitude;placeName=place.name;state=place.admin1||"";
+ }
+ const url="https://api.open-meteo.com/v1/forecast?latitude="+encodeURIComponent(lat)+"&longitude="+encodeURIComponent(lon)+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl,cloud_cover,visibility,uv_index,is_day&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_probability_max,sunrise,sunset,uv_index_max&forecast_days=3&timezone=auto";
  const r=await fetch(url);
  if(!r.ok)throw new Error("Weather API failed ("+r.status+").");
- const d=await r.json(), c=d.current;
- const labels:Record<number,string>={0:"Clear sky",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Rime fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",80:"Rain showers",81:"Rain showers",82:"Heavy rain showers",95:"Thunderstorm",96:"Thunderstorm with hail",99:"Thunderstorm with hail"};
- return `${place.name}${place.country ? ", "+place.country : ""}\n🌡 ${c.temperature_2m}°C (feels ${c.apparent_temperature}°C)\n☁️ ${labels[c.weather_code]||"Weather update"}\n💧 Humidity ${c.relative_humidity_2m}% · 💨 Wind ${c.wind_speed_10m} km/h`;
+ const d=await r.json(), c=d.current, day=d.daily;
+ const labels:Record<number,string>={0:"Clear",1:"Mostly clear",2:"Partly cloudy",3:"Cloudy",45:"Fog",48:"Freezing fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",80:"Rain showers",81:"Rain showers",82:"Heavy showers",95:"Thunderstorm",96:"Thunderstorm with hail",99:"Thunderstorm with hail"};
+ const today=day?.time?.[0]||"";
+ const hi=day?.temperature_2m_max?.[0], lo=day?.temperature_2m_min?.[0], rain=day?.precipitation_probability_max?.[0];
+ const fmtTime=(v:string)=>v?v.split("T")[1]?.slice(0,5)||v:"—";
+ return `${placeName}${state?", "+state:""}
+🌡 ${c.temperature_2m}°C · Feels like ${c.apparent_temperature}°C
+☁️ ${labels[c.weather_code]||"Weather update"}
+📈 High ${hi}°C · Low ${lo}°C · 🌧 Rain ${rain}%
+💧 Humidity ${c.relative_humidity_2m}% · 💨 Wind ${c.wind_speed_10m} km/h
+☀️ UV ${c.uv_index} · ☁️ Clouds ${c.cloud_cover}% · 👁 Visibility ${Math.round((c.visibility||0)/1000)} km
+🌅 Sunrise ${fmtTime(day?.sunrise?.[0])} · 🌇 Sunset ${fmtTime(day?.sunset?.[0])}`;
 }
 
 async function fetchRss(query:string,language="en"):Promise<string>{
@@ -81,7 +94,7 @@ export async function executeDirectTask(task:Task):Promise<string>{
  const a=task.action;
  if(!a)return task.prompt;
  if(a.type==="reminder")return a.message||task.prompt;
- if(a.type==="weather")return await fetchWeather(a.location||"");
+ if(a.type==="weather")return await fetchWeather(a.location||"",{latitude:a.latitude,longitude:a.longitude});
  if(a.type==="anime")return await fetchAnime(a.topic||task.prompt,a.language||"en",a.scope||"all updates");
  if(a.type==="news"||a.type==="movie"){const prefix=a.type==="movie"?"movie ":"";const scope=a.scope?" "+a.scope:"";return await fetchNews(prefix+(a.topic||task.prompt)+scope,a.language||"en");}
  if(a.type==="web")return await fetchWebUpdate(a.url||"");
