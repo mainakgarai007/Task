@@ -11,12 +11,23 @@ Standalone, local-first task automation tool.
 - Mobile-first dark UI
 - GitHub Pages deployment
 
-### Roadmap
-Optional AI providers, web monitoring, state-aware change detection, conditions/stop conditions, file processing and event connectors.
+### V2 Smart Task Engine
 
-AI will be optional; the tool itself does not provide an AI model or API key.
+- AI-powered task execution at the scheduled time
+- Previous-run context and result memory
+- Execution history, success/failure state and error tracking
+- Run-now AI execution
+- Recurring execution with automatic next-run scheduling
+- Android-friendly service-worker notification path
+- Gemini, OpenAI-compatible, Claude and custom AI providers
 
-### Development
+AI is required for task creation and execution. Users provide their own API key and selected model.
+
+## Roadmap
+
+Conditional automation, change detection, IF/THEN rules, stop conditions, web/API monitoring, file processing and event connectors.
+
+## Development
 ```bash
 npm install
 npm run dev
