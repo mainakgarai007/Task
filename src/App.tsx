@@ -73,8 +73,8 @@ function App(){
   try{
    const result=mode==="direct"?await executeDirectTask(task):await executeTaskWithAI(task,ai);
    const finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result};
-   setTasks(ts=>ts.map(t=>{if(t.id!==id)return t;const completed=t.frequency==="once" || Boolean(t.schedule?.maxRuns && t.runCount+1>=t.schedule.maxRuns);return {...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)};}));
-   await notify("Task completed",task.title);
+   setTasks(ts=>ts.map(t=>{if(t.id!==id)return t;const completed=t.frequency==="once" || Boolean(t.schedule?.maxRuns && t.runCount+1>=t.schedule.maxRuns) || Boolean(t.schedule?.endDate && new Date(finished).toISOString().slice(0,10)>t.schedule.endDate);return {...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)};}));
+   await notify("Task completed",task.title+"\n"+result.slice(0,300));
   }catch(e){
    const message=e instanceof Error?e.message:"Task execution failed.",finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"failed",error:message};
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,status:t.frequency==="once"?"failed":"active",nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
@@ -83,7 +83,7 @@ function App(){
  }
 
  useEffect(()=>{
-  const timer=setInterval(()=>{const now=Date.now();tasks.filter(t=>t.enabled&&t.status==="active"&&new Date(t.nextRun).getTime()<=now).forEach(t=>executeTask(t.id));},15000);
+  const timer=setInterval(()=>{const now=Date.now();tasks.filter(t=>{if(!t.enabled||t.status!=="active"||new Date(t.nextRun).getTime()>now)return false;if(t.schedule?.endDate&&new Date(t.schedule.endDate+"T23:59:59").getTime()<now){setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:false,status:"completed"}:x));return false;}return true;}).forEach(t=>executeTask(t.id));},15000);
   return()=>clearInterval(timer);
  },[tasks,ai,aiReady,running]);
 
