@@ -29,6 +29,36 @@ export async function fetchWeather(location:string,coords?:{latitude?:number;lon
 🌅 Sunrise ${fmtTime(day?.sunrise?.[0])} · 🌇 Sunset ${fmtTime(day?.sunset?.[0])}`;
 }
 
+export function getCurrentLocation():Promise<{latitude:number;longitude:number}>{
+ return new Promise((resolve,reject)=>{
+  if(!navigator.geolocation){reject(new Error("Location access is not supported by this browser."));return;}
+  navigator.geolocation.getCurrentPosition(
+   p=>resolve({latitude:p.coords.latitude,longitude:p.coords.longitude}),
+   e=>reject(new Error(e.code===1?"Location permission was denied. Allow location access for this site.":e.code===2?"Your location could not be determined right now.":"Location request timed out.")),
+   {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+  );
+ });
+}
+
+export async function reverseGeocodeIndia(coords:{latitude:number;longitude:number}):Promise<{label:string;countryCode:string}>{
+ const url="https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+encodeURIComponent(String(coords.latitude))+"&longitude="+encodeURIComponent(String(coords.longitude))+"&localityLanguage=en";
+ const r=await fetch(url);
+ if(!r.ok)throw new Error("Could not identify your current location.");
+ const d=await r.json();
+ const countryCode=String(d?.countryCode||"").toUpperCase();
+ if(countryCode!=="IN")throw new Error("Your current location is outside India. Weather location must be in India.");
+ const place=d?.city||d?.locality||d?.principalSubdivision||"Current location";
+ const state=d?.principalSubdivision||"";
+ return {label:state&&place!==state?place+", "+state:place,countryCode};
+}
+
+export async function resolveAutoWeatherLocation(mode:"auto-once"|"auto-live",saved?:{latitude?:number;longitude?:number;location?:string}){
+ if(mode==="auto-once"&&saved?.latitude!=null&&saved?.longitude!=null&&saved.location)return {latitude:saved.latitude,longitude:saved.longitude,label:saved.location};
+ const coords=await getCurrentLocation();
+ const place=await reverseGeocodeIndia(coords);
+ return {latitude:coords.latitude,longitude:coords.longitude,label:place.label};
+}
+
 async function fetchRss(query:string,language="en"):Promise<string>{
  const q=query.trim();
  if(!q)throw new Error("News topic is required.");
@@ -94,7 +124,7 @@ export async function executeDirectTask(task:Task):Promise<string>{
  const a=task.action;
  if(!a)return task.prompt;
  if(a.type==="reminder")return a.message||task.prompt;
- if(a.type==="weather")return await fetchWeather(a.location||"",{latitude:a.latitude,longitude:a.longitude});
+ if(a.type==="weather"){if(a.locationMode==="auto-live"){const live=await resolveAutoWeatherLocation("auto-live");return await fetchWeather(live.label,{latitude:live.latitude,longitude:live.longitude});}return await fetchWeather(a.location||"Current location",{latitude:a.latitude,longitude:a.longitude});}
  if(a.type==="anime")return await fetchAnime(a.topic||task.prompt,a.language||"en",a.scope||"all updates");
  if(a.type==="news"||a.type==="movie"){const prefix=a.type==="movie"?"movie ":"";const scope=a.scope?" "+a.scope:"";return await fetchNews(prefix+(a.topic||task.prompt)+scope,a.language||"en");}
  if(a.type==="web")return await fetchWebUpdate(a.url||"");
