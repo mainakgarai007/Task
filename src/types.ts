@@ -22,6 +22,8 @@ export interface TaskAction{
  latitude?:number;
  longitude?:number;
  topic?:string;
+ animeId?:number;
+ animeSource?:"anilist"|"jikan";
  language?:string;
  url?:string;
  scope?:string;
