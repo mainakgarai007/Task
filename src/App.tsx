@@ -29,6 +29,7 @@ function App(){
  const [creatorMode,setCreatorMode]=useState<"choose"|"manual"|"ai">("choose");
  const [editingId,setEditingId]=useState<string|null>(null);
  const [deleteTarget,setDeleteTarget]=useState<Task|null>(null);
+ const [historyTarget,setHistoryTarget]=useState<Task|null>(null);
  const [settingsOpen,setSettingsOpen]=useState(false);
  const [request,setRequest]=useState("");
  const [ai,setAi]=useState<AISettings>(loadAISettings);
@@ -66,6 +67,9 @@ function App(){
  const [manualInterval,setManualInterval]=useState("120");
  const [manualEndDate,setManualEndDate]=useState("");
  const [manualMaxRuns,setManualMaxRuns]=useState("");
+ const [manualNotifyChange,setManualNotifyChange]=useState(false);
+ const [manualCondition,setManualCondition]=useState("");
+ const [manualStopCondition,setManualStopCondition]=useState("");
  const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
 
  useEffect(()=>saveTasks(tasks),[tasks]);
@@ -122,6 +126,10 @@ function App(){
   setManualScope(task.action?.scope||"all updates");
   setManualCategory(task.action?.category||"AI & tech");
   setManualRegion(task.action?.region||"India");
+  setManualUrl(task.action?.url||"");
+  setManualNotifyChange(Boolean(task.action?.notifyOnChange||s.notifyOnChange));
+  setManualCondition(task.action?.condition||"");
+  setManualStopCondition(task.action?.stopCondition||"");
  }
  function openEdit(task:Task){
   setError("");
@@ -153,11 +161,11 @@ function App(){
   let prompt="";
   if(manualType==="reminder"){if(!manualMessage.trim())return setError("Enter your reminder.");action={type:"reminder",message:manualMessage.trim()};prompt=manualMessage.trim();}
   else if(manualType==="weather"){if(manualWeatherLocationMode==="manual"&&!manualLocation.trim())return setError("Search and select an Indian weather location.");if(manualWeatherLocationMode==="auto-once"&&(!manualLocation.trim()||!manualWeatherCoords))return setError("Use your location once before saving this task.");action={type:"weather",location:manualLocation.trim()||"Current location",locationMode:manualWeatherLocationMode,latitude:manualWeatherCoords?.latitude,longitude:manualWeatherCoords?.longitude};prompt=manualWeatherLocationMode==="auto-live"?"Get the current weather for my current location.":"Get the current weather for "+(manualLocation.trim()||"my saved location")+".";}
-  else if(manualType==="news"){const topic=manualTopicPreset!=="Custom"?manualTopicPreset:manualTopic.trim();if(!topic)return setError("Choose or enter a topic.");action={type:"news",topic,language:manualLanguage,category:manualCategory,region:manualRegion,scope:manualScope};prompt="Get the latest "+manualScope+" about "+topic+" for "+manualRegion+".";}
-  else if(manualType==="anime"){const topic=manualTopicPreset!=="Custom"?manualTopicPreset:manualTopic.trim();if(!topic)return setError("Choose or enter an anime title/topic.");action={type:"anime",topic,language:manualLanguage,scope:manualScope};prompt="Get "+manualScope+" about "+topic+".";}
-  else if(manualType==="movie"){const topic=manualTopicPreset!=="Custom"?manualTopicPreset:manualTopic.trim();if(!topic)return setError("Choose or enter a movie/topic.");action={type:"movie",topic,language:manualLanguage,scope:manualScope};prompt="Get "+manualScope+" about "+topic+".";}
-  else {if(!manualUrl.trim())return setError("Enter a URL.");action={type:"web",url:manualUrl.trim(),scope:manualScope};prompt="Check this public URL for "+manualScope+": "+manualUrl.trim();}
-  const schedule:TaskSchedule={time:manualTime,startDate:manualDate,endDate:manualEndDate||undefined,weekday:manualFrequency==="weekly"?Number(manualWeekday):undefined,monthDay:manualFrequency==="monthly"?Number(manualMonthDay):undefined,intervalMinutes:manualFrequency==="custom"?Number(manualInterval):undefined,maxRuns:manualMaxRuns?Number(manualMaxRuns):undefined};
+  else if(manualType==="news"){const topic=manualTopicPreset!=="Custom"?manualTopicPreset:manualTopic.trim();if(!topic)return setError("Choose or enter a topic.");action={type:"news",topic,language:manualLanguage,category:manualCategory,region:manualRegion,scope:manualScope,condition:manualCondition||undefined,stopCondition:manualStopCondition||undefined,notifyOnChange:manualNotifyChange};prompt="Get the latest "+manualScope+" about "+topic+" for "+manualRegion+".";}
+  else if(manualType==="anime"){const topic=manualTopicPreset!=="Custom"?manualTopicPreset:manualTopic.trim();if(!topic)return setError("Choose or enter an anime title/topic.");action={type:"anime",topic,language:manualLanguage,scope:manualScope,condition:manualCondition||undefined,stopCondition:manualStopCondition||undefined,notifyOnChange:manualNotifyChange};prompt="Get "+manualScope+" about "+topic+".";}
+  else if(manualType==="movie"){const topic=manualTopicPreset!=="Custom"?manualTopicPreset:manualTopic.trim();if(!topic)return setError("Choose or enter a movie/topic.");action={type:"movie",topic,language:manualLanguage,scope:manualScope,condition:manualCondition||undefined,stopCondition:manualStopCondition||undefined,notifyOnChange:manualNotifyChange};prompt="Get "+manualScope+" about "+topic+".";}
+  else {if(!manualUrl.trim())return setError("Enter a URL.");action={type:"web",url:manualUrl.trim(),scope:manualScope,condition:manualCondition||undefined,stopCondition:manualStopCondition||undefined,notifyOnChange:manualNotifyChange};prompt="Check this public URL for "+manualScope+": "+manualUrl.trim();}
+  const schedule:TaskSchedule={time:manualTime,startDate:manualDate,endDate:manualEndDate||undefined,weekday:manualFrequency==="weekly"?Number(manualWeekday):undefined,monthDay:manualFrequency==="monthly"?Number(manualMonthDay):undefined,intervalMinutes:manualFrequency==="custom"?Number(manualInterval):undefined,maxRuns:manualMaxRuns?Number(manualMaxRuns):undefined,notifyOnChange:manualNotifyChange};
   const firstRun=buildFirstRun(manualDate,manualTime,manualFrequency,manualWeekday,manualMonthDay,Number(manualInterval));
   const existing=editingId?tasks.find(t=>t.id===editingId):undefined;
   if(existing){
