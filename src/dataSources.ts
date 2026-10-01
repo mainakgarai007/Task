@@ -44,6 +44,20 @@ async function fetchRss(query:string,language="en"):Promise<string>{
  return items.map((x,i)=>`${i+1}. ${x.title} — ${x.source}`).join("\n");
 }
 
+async function fetchAnime(topic:string,language="en",scope="all updates"):Promise<string>{
+ const q=topic.trim();
+ if(!q)throw new Error("Anime title/topic is required.");
+ try{
+  const response=await fetch("https://api.jikan.moe/v4/anime?q="+encodeURIComponent(q)+"&limit=5&sfw=true");
+  if(response.ok){
+   const data=await response.json();
+   const list=(data?.data||[]).slice(0,5);
+   if(list.length)return list.map((a:any,i:number)=>`${i+1}. ${a.title||q} — ${a.type||"Anime"} · ${a.status||"Unknown status"} · ${a.episodes??"?"} eps`).join("\n");
+  }
+ }catch{}
+ return fetchRss("anime "+q+" "+scope,language);
+}
+
 export async function fetchNews(topic:string,language="en"):Promise<string>{
  return fetchRss(topic,language);
 }
