@@ -4,6 +4,10 @@ A standalone, mobile-first task automation app inspired by the workflow of ChatG
 
 Live app: https://mainakgarai007.github.io/Task/
 
+## User manual
+
+The live app includes an in-app **? User Manual** button in the header. It explains task creation, scheduling, Weather location modes, Anime monitoring, smart rules, AI, backups, notifications and current browser limitations. **Update rule: whenever a feature or workflow changes, this manual and this README should be updated together.**
+
 ## What it does
 
 Create scheduled tasks manually or with AI. Tasks are stored locally in the browser and can run direct public-data actions without an AI call when possible.
