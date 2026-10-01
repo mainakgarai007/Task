@@ -15,7 +15,7 @@ export function normalizeTasks(value:unknown):Task[]{
   if(!isRecord(item)||typeof item.id!=="string"||typeof item.title!=="string"||typeof item.nextRun!=="string")return null;
   if(!frequencies.includes(item.frequency)||!statuses.includes(item.status)||!modes.includes(item.executionMode))return null;
   const action=isRecord(item.action)?item.action as TaskAction:{type:"reminder" as const,message:typeof item.prompt==="string"?item.prompt:""};
-  const safeAction:TaskAction={type:["reminder","weather","news","anime","movie","web","ai"].includes(action.type)?action.type:"reminder",...action};
+  const safeAction:TaskAction={...action,type:["reminder","weather","news","anime","movie","web","ai"].includes(action.type)?action.type:"reminder"};
   const schedule=isRecord(item.schedule)?item.schedule as TaskSchedule:undefined;
   return {
    ...item,
