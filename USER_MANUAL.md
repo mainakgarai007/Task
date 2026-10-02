@@ -74,7 +74,33 @@ THEN
 A sequence works with any task. Example: start 6, end 12, step 1. With Completed mode, the sequence advances only after the user presses Completed.
 
 ## Change detection
-Enable **Notify only when the result changes** to compare the current result with the previous saved result.
+Change detection now compares the previous saved result with the current result using normalized text.
+
+It can identify:
+- **New items** — lines/items present now but not before
+- **Removed items** — lines/items that disappeared
+- **Updated content** — content changed without a clean added/removed item
+- **Mixed changes** — additions and removals together
+
+The change kind and summary are saved with the execution history.
+
+Enable **Notify only when the result changes** to suppress unchanged runs. IF/THEN rules can also test **New items** or **Removed items** directly.
+
+Example:
+
+```
+Previous:
+Episode 5
+Episode 6
+
+Current:
+Episode 5
+Episode 6
+Episode 7
+
+Detected:
+New item → Episode 7
+```
 
 ## History and controls
 Task history records executions and acknowledgements. Tasks can be edited, paused, resumed, run immediately or deleted.
