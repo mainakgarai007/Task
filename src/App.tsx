@@ -183,6 +183,14 @@ function App(){
    const acknowledgement:TaskAcknowledgement|undefined=requiresAcknowledgement?{id:uid(),executionId:record.id,mode:task.notificationMode==="completed"?"completed":"see",status:"pending",createdAt:finished,remindEveryMinutes:task.notificationMode==="completed"?Math.max(1,task.remindIfNotCompletedMinutes||5):undefined,nextReminderAt:task.notificationMode==="completed"?new Date(Date.now()+Math.max(1,task.remindIfNotCompletedMinutes||5)*60000).toISOString():undefined,sequenceValue,terminalAfterAcknowledgement:terminalAfterExecution}:undefined;
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!executionEnded,status:executionEnded?"completed":"active",nextRun:executionEnded?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement}:t));
    if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+result.slice(0,300));
+   // A plain direct task must still notify when acknowledgement mode is disabled.
+   // IF/THEN chains own their notifications, so avoid duplicate alerts there.
+   const ruleConfigured=Boolean(rules.length||task.action?.condition||task.action?.thenActions?.length);
+   const changeAllowed=!task.action?.notifyOnChange||changed;
+   const trackedAllowed=!trackedUpdate||(task.runCount===0||changed);
+   if(!acknowledgement&&task.notificationMode==="disable"&&!ruleConfigured&&changeAllowed&&trackedAllowed){
+    await notify("Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+result.slice(0,300));
+   }
    if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))){
     let chain:TaskThenAction[]=task.action?.thenActions?.length?task.action.thenActions:[];
     if(!chain.length){if(conditionThen==="notify_and_stop")chain=[{type:"notify"},{type:"stop"}];else if(conditionThen==="wait")chain=[{type:"wait",minutes:conditionWaitMinutes}];else if(conditionThen==="notify"||conditionThen==="sound"||conditionThen==="create_task")chain=[{type:conditionThen}];}
