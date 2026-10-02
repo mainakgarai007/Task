@@ -50,11 +50,11 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
  return d.toISOString();
 }
 
-export async function notify(title:string,body:string){
+export async function notify(title:string,body:string,options?:{taskId?:string;ackId?:string;actions?:{action:string;title:string}[]}){
  try{
   if("serviceWorker" in navigator){
    const reg=await navigator.serviceWorker.getRegistration();
-   if(reg?.showNotification){await reg.showNotification(title,{body});return;}
+   if(reg?.showNotification){await reg.showNotification(title,{body,actions:options?.actions||[],data:{taskId:options?.taskId,ackId:options?.ackId}});return;}
   }
   if("Notification" in window){
    if(Notification.permission==="granted")new Notification(title,{body});
