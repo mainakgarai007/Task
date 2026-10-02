@@ -6,7 +6,7 @@ Live app: https://mainakgarai007.github.io/Task/
 
 ## User manual
 
-The live app includes an in-app **? User Manual** button in the header. It explains task creation, scheduling, Weather location modes, Anime monitoring, smart rules, AI, backups, notifications and current browser limitations. **Update rule: whenever a feature or workflow changes, this manual and this README should be updated together.**
+The live app includes an in-app **? User Manual** button in the header. It explains task creation, scheduling, Weather location modes, Anime monitoring, smart rules, AI, backups, notifications and current browser limitations. **Update rule: whenever a feature or workflow changes, the in-app manual, `USER_MANUAL.md` and this README should be updated together.**
 
 ## What it does
 
@@ -40,17 +40,22 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Tasks waiting for required AI configuration are not retried by the scheduler until the requirement is available; they return to idle automatically after AI settings are configured
 
 ### Smart automation
-- Universal IF/THEN condition rules using current result, previous result, change state, current time, or day of week
-- Multiple IF conditions with AND logic
-- THEN actions: notify, stop, notify + stop, play a sound, or create an AI follow-up task
+- Advanced universal IF/THEN condition builder
+- Unlimited conditions inside a group
+- AND / OR groups
+- Nested condition groups
+- NOT group inversion
+- Current result, previous result, changed state, time and day conditions
+- Weather-aware result fields: weather state, temperature, feels-like, rain probability, cloud cover, humidity, wind, UV and visibility
 - Text operators: contains, not contains, equals, not equals, starts with, ends with
 - Numeric operators: greater than, less than, greater/equal, less/equal
+- THEN action chains that run top-to-bottom
+- THEN actions: notify, reminder, wait, sound, open link, create task, run task, save result, stop and complete
 - Direct execution for supported public-data tasks
 - AI execution when reasoning/generation is actually required
 - Result comparison
 - Notify only when a result changes
-- Optional condition matching
-- Optional stop condition
+- Optional legacy condition/stop-condition compatibility
 - Previous-run context for AI tasks
 
 ## Built-in actions
