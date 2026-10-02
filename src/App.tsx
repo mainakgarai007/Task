@@ -112,7 +112,8 @@ function App(){
  const [manualStopSource,setManualStopSource]=useState<"result"|"previousResult"|"changed"|"time"|"day">("result");
  const [manualStopOperator,setManualStopOperator]=useState<"contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal">("contains");
  const [manualStopValue,setManualStopValue]=useState("");
- const [manualIfEnabled,setManualIfEnabled]=useState(false);\n const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(newConditionGroup());
+ const [manualIfEnabled,setManualIfEnabled]=useState(false);
+const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(newConditionGroup());
  const [manualSecondIfEnabled,setManualSecondIfEnabled]=useState(false);
  const [manualSecondSource,setManualSecondSource]=useState<"result"|"previousResult"|"changed"|"time"|"day">("day");
  const [manualSecondOperator,setManualSecondOperator]=useState<"contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal">("equals");
