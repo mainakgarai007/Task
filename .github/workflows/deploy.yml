@@ -43,6 +43,10 @@ jobs:
         with:
           path: ./dist
 
+      # GitHub Pages artifact metadata can take a few seconds to become visible.
+      - name: Wait for Pages artifact
+        run: sleep 10
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
