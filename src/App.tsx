@@ -28,6 +28,11 @@ const conditionFieldOptions:{value:ConditionField;label:string}[]=[
 function newCondition():TaskCondition{return {type:"condition",source:"result",field:"result",operator:"contains",value:""}}
 function newConditionGroup():TaskConditionGroup{return {type:"group",join:"all",children:[newCondition()]}}
 function conditionTreeHasLeaves(node:TaskConditionNode):boolean{return node.type==="group"?node.children.some(conditionTreeHasLeaves):true}
+function conditionTreeHasInvalidValues(node:TaskConditionNode):boolean{
+ if(node.type==="group")return node.children.length===0||node.children.some(conditionTreeHasInvalidValues);
+ if(node.source==="changed")return false;
+ return !String(node.value||"").trim();
+}
 function legacyToConditionTree(task:Task):TaskConditionGroup{const rules=task.action?.conditionRules?.length?task.action.conditionRules:(task.action?.conditionRule?[task.action.conditionRule]:[]);return {type:"group",join:task.action?.conditionJoin==="any"?"any":"all",children:rules.map(r=>({...r,type:"condition"}))}}
 function ConditionBuilder({node,onChange,onRemove,depth=0}:{node:TaskConditionNode;onChange:(node:TaskConditionNode)=>void;onRemove?:()=>void;depth?:number}){
  if(node.type!=="group"){
@@ -41,7 +46,10 @@ function ConditionBuilder({node,onChange,onRemove,depth=0}:{node:TaskConditionNo
   </div>;
  }
  const group=node; const updateChild=(index:number,next:TaskConditionNode)=>onChange({...group,children:group.children.map((child,i)=>i===index?next:child)});
- const removeChild=(index:number)=>onChange({...group,children:group.children.filter((_,i)=>i!==index)});
+ const removeChild=(index:number)=>{
+  if(group.children.length<=1)return;
+  onChange({...group,children:group.children.filter((_,i)=>i!==index)});
+ };
  return <div className="ruleBox" style={{marginLeft:Math.min(depth,5)*10}}><div className="fieldLabel">IF GROUP</div>
   <div className="threeCols"><select value={group.join} onChange={e=>onChange({...group,join:e.target.value as "all"|"any"})}><option value="all">AND — all conditions</option><option value="any">OR — any condition</option></select><label className="checkRow"><input type="checkbox" checked={Boolean(group.negated)} onChange={e=>onChange({...group,negated:e.target.checked})}/><span>NOT group</span></label>{onRemove&&<button type="button" className="dangerBtn" onClick={onRemove}>Remove group</button>}</div>
   <div style={{display:"grid",gap:8,marginTop:8}}>{group.children.map((child,index)=><div key={index}>{index>0&&<div className="hint" style={{padding:"2px 0"}}>{group.join==="all"?"AND":"OR"}</div>}<ConditionBuilder node={child} depth={depth+1} onChange={next=>updateChild(index,next)} onRemove={()=>removeChild(index)}/></div>)}</div>
@@ -212,7 +220,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+result.slice(0,300));
    // A plain direct task must still notify when acknowledgement mode is disabled.
    // IF/THEN chains own their notifications, so avoid duplicate alerts there.
-   const ruleConfigured=Boolean(rules.length||task.action?.condition||task.action?.thenActions?.length);
+   const ruleConfigured=Boolean(task.action?.conditionTree||rules.length||task.action?.condition||task.action?.thenActions?.length);
    const changeAllowed=!task.action?.notifyOnChange||changed;
    const trackedAllowed=!trackedUpdate||(task.runCount===0||changed);
    if(!acknowledgement&&task.notificationMode==="disable"&&!ruleConfigured&&changeAllowed&&trackedAllowed){
@@ -359,6 +367,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
   let action:TaskAction;
   let prompt="";
   const treeEnabled=manualIfEnabled&&conditionTreeHasLeaves(manualConditionTree);
+  if(treeEnabled&&conditionTreeHasInvalidValues(manualConditionTree))return setError("Complete every IF condition value, or remove the unused condition.");
   const tree=treeEnabled?manualConditionTree:undefined;
   const firstLeaf=tree?.children.find(x=>x.type!=="group") as TaskCondition|undefined;
   const ifRule=manualIfEnabled&&manualConditionValue.trim()?{source:manualConditionSource,operator:manualConditionOperator,value:manualConditionValue.trim()}:firstLeaf;
