@@ -27,10 +27,10 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
  }
 
  if(frequency==="weekly"){
-  const target=((Number(schedule?.weekday)||0)+7)%7;
+  const days=(schedule?.weekdays?.length?schedule.weekdays:[Number(schedule?.weekday)||0]).map(n=>((Number(n)||0)+7)%7).sort((a,b)=>a-b);
   const current=d.getDay();
-  let delta=(target-current+7)%7;
-  if(delta===0)delta=7;
+  let delta=7;
+  for(const target of days){const candidate=(target-current+7)%7;const step=candidate===0?7:candidate;if(step<delta)delta=step;}
   d.setDate(d.getDate()+delta);
   setLocalTime(d,schedule?.time);
  }
