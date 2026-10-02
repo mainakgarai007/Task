@@ -16,13 +16,27 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
  const d=new Date(from);
 
  if(frequency==="hourly"){
-  const {minutes}=timeParts(schedule?.time);
-  d.setHours(d.getHours()+1);
-  d.setMinutes(minutes,0,0);
+  // Hourly means one hour after the previous run. It never depends on a selected clock time.
+  d.setTime(d.getTime()+60*60*1000);
+  d.setSeconds(0,0);
  }
 
  if(frequency==="daily"){
-  d.setDate(d.getDate()+1);
+  const days=schedule?.weekdays?.length
+   ?schedule.weekdays.map(n=>((Number(n)||0)+7)%7).sort((a,b)=>a-b)
+   :undefined;
+  if(days?.length){
+   const current=d.getDay();
+   let delta=7;
+   for(const target of days){
+    const candidate=(target-current+7)%7;
+    const step=candidate===0?7:candidate;
+    if(step<delta)delta=step;
+   }
+   d.setDate(d.getDate()+delta);
+  }else{
+   d.setDate(d.getDate()+1);
+  }
   setLocalTime(d,schedule?.time);
  }
 
@@ -30,7 +44,11 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
   const days=(schedule?.weekdays?.length?schedule.weekdays:[Number(schedule?.weekday)||0]).map(n=>((Number(n)||0)+7)%7).sort((a,b)=>a-b);
   const current=d.getDay();
   let delta=7;
-  for(const target of days){const candidate=(target-current+7)%7;const step=candidate===0?7:candidate;if(step<delta)delta=step;}
+  for(const target of days){
+   const candidate=(target-current+7)%7;
+   const step=candidate===0?7:candidate;
+   if(step<delta)delta=step;
+  }
   d.setDate(d.getDate()+delta);
   setLocalTime(d,schedule?.time);
  }
@@ -44,7 +62,9 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
  }
 
  if(frequency==="custom"){
-  d.setMinutes(d.getMinutes()+(Math.max(1,Number(schedule?.intervalMinutes)||60)));
+  // Custom minute intervals are relative intervals; they never depend on a clock time.
+  d.setTime(d.getTime()+Math.max(1,Number(schedule?.intervalMinutes)||60)*60000);
+  d.setSeconds(0,0);
  }
 
  return d.toISOString();
