@@ -9,9 +9,9 @@ export interface TaskAcknowledgement{id:string;executionId?:string;mode:"see"|"c
 export type ActionType="reminder"|"weather"|"news"|"anime"|"movie"|"web"|"ai";
 export type ThenActionType="notify"|"reminder"|"wait"|"sound"|"open_link"|"create_task"|"stop"|"complete"|"save_result"|"run_task";
 export interface TaskThenAction{type:ThenActionType;seconds?:number;minutes?:number;message?:string;url?:string;taskId?:string;}
-export type ConditionSource="result"|"previousResult"|"changed"|"newItems"|"removedItems"|"time"|"day";
+export type ConditionSource="result"|"previousResult"|"changed"|"time"|"day";
 export type ConditionOperator="contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal";
-export type ConditionField="result"|"weather"|"temperature"|"feels_like"|"rain_probability"|"cloud_cover"|"humidity"|"wind"|"uv"|"visibility"|"time"|"day"|"changed";
+export type ConditionField="result"|"weather"|"temperature"|"feels_like"|"rain_probability"|"cloud_cover"|"humidity"|"wind"|"uv"|"visibility"|"time"|"day"|"changed"|"new_items"|"removed_items";
 export interface TaskCondition{type?:"condition";source:ConditionSource;operator:ConditionOperator;value?:string;field?:ConditionField}
 export interface TaskConditionGroup{type:"group";join:"all"|"any";negated?:boolean;children:TaskConditionNode[]}
 export type TaskConditionNode=TaskCondition|TaskConditionGroup;
