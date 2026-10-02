@@ -2,6 +2,7 @@ import {useEffect,useMemo,useRef,useState} from "react";
 import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule} from "./types";
 import {loadTasks,saveTasks,uid,normalizeTasks} from "./storage";
 import {nextRun,notify} from "./scheduler";
+import {evaluateCondition} from "./conditions";
 import {createTaskWithAI,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel,executeTaskWithAI} from "./ai";
 import {executeDirectTask,getCurrentLocation,reverseGeocodeIndia,searchAnime} from "./dataSources";
 
@@ -106,8 +107,8 @@ function App(){
    const changed=normalize(previous)!==normalize(result);
    const scope=(task.action?.scope||"").toLowerCase();
    const trackedUpdate=["new episode","new season","release date","only when changed"].includes(scope);
-   const conditionOk=!task.action?.condition||normalize(result).includes(normalize(task.action.condition));
-   const stopHit=Boolean(task.action?.stopCondition&&normalize(result).includes(normalize(task.action.stopCondition)));
+   const conditionOk=task.action?.conditionRule?evaluateCondition(task.action.conditionRule,{result,previousResult:previous,changed}):(!task.action?.condition||normalize(result).includes(normalize(task.action.condition)));
+   const stopHit=task.action?.stopConditionRule?evaluateCondition(task.action.stopConditionRule,{result,previousResult:previous,changed}):Boolean(task.action?.stopCondition&&normalize(result).includes(normalize(task.action.stopCondition)));
    const completed=task.frequency==="once" || stopHit || Boolean(task.schedule?.maxRuns && task.runCount+1>=task.schedule.maxRuns) || Boolean(task.schedule?.endDate && new Date(finished).toISOString().slice(0,10)>task.schedule.endDate);
    const recurringNext=manual&&task.frequency!=="once"?(()=>{let candidate=new Date(task.nextRun),guard=0;while(candidate.getTime()<=Date.now()&&guard++<1000)candidate=new Date(nextRun(candidate,task.frequency,task.schedule));return candidate.toISOString();})():nextRun(new Date(),task.frequency,task.schedule);
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:recurringNext}:t));
