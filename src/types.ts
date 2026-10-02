@@ -15,7 +15,7 @@ export interface TaskSchedule{
  time:string;startDate?:string;endDate?:string;weekday?:number;weekdays?:number[];months?:number[];monthDay?:number;monthDays?:number[];intervalMinutes?:number;maxRuns?:number;notifyOnChange?:boolean;
 }
 export interface TaskAction{
- type:ActionType;message?:string;location?:string;locationMode?:"manual"|"auto-once"|"auto-live";latitude?:number;longitude?:number;topic?:string;animeId?:number;animeSource?:"anilist"|"jikan";language?:string;url?:string;scope?:string;region?:string;condition?:string;stopCondition?:string;conditionRule?:TaskCondition;conditionRules?:TaskCondition[];conditionJoin?:"all"|"any";conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task";stopConditionRule?:TaskCondition;notifyOnChange?:boolean;category?:string;
+ type:ActionType;message?:string;location?:string;locationMode?:"manual"|"auto-once"|"auto-live";latitude?:number;longitude?:number;topic?:string;animeId?:number;animeSource?:"anilist"|"jikan";language?:string;url?:string;scope?:string;region?:string;condition?:string;stopCondition?:string;conditionRule?:TaskCondition;conditionRules?:TaskCondition[];conditionJoin?:"all"|"any";conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task"|"wait";waitMinutes?:number;stopConditionRule?:TaskCondition;notifyOnChange?:boolean;category?:string;
 }
 export interface ExecutionRecord{id:string;startedAt:string;finishedAt:string;status:"success"|"failed";result?:string;error?:string;}
 export interface Task{
