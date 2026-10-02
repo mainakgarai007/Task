@@ -23,6 +23,7 @@ function detectMeaningfulChange(previous:string,current:string,detectedAt:string
  if(normalizeChangeLine(prev)===normalizeChangeLine(now))return {kind:"none",changed:false,newItems:[],removedItems:[],summary:"No meaningful change detected.",detectedAt};
  const oldItems=[...new Set(extractChangeItems(prev))],newItemsAll=[...new Set(extractChangeItems(now))];
  const oldSet=new Set(oldItems),newSet=new Set(newItemsAll);
+ if(oldItems.length===newItemsAll.length&&oldItems.every(x=>newSet.has(x))&&newItemsAll.every(x=>oldSet.has(x)))return {kind:"none",changed:false,newItems:[],removedItems:[],summary:"No meaningful change detected.",detectedAt};
  const added=newItemsAll.filter(x=>!oldSet.has(x)),removed=oldItems.filter(x=>!newSet.has(x));
  const kind=added.length&&removed.length?"mixed":added.length?"new_items":removed.length?"removed_items":"updated";
  const parts:string[]=[];
