@@ -186,7 +186,8 @@ function App(){
    if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))){
     let chain:TaskThenAction[]=task.action?.thenActions?.length?task.action.thenActions:[];
     if(!chain.length){if(conditionThen==="notify_and_stop")chain=[{type:"notify"},{type:"stop"}];else if(conditionThen==="wait")chain=[{type:"wait",minutes:conditionWaitMinutes}];else if(conditionThen==="notify"||conditionThen==="stop"||conditionThen==="sound"||conditionThen==="create_task")chain=[{type:conditionThen}];}
-    for(const step of chain){
+    for(const rawStep of chain){
+     const step:TaskThenAction=rawStep;
      if(step.type==="notify"||step.type==="reminder") await notify(step.type==="reminder"?"Reminder":"Task completed",step.message?.trim()||task.title+"\n"+result.slice(0,300));
      else if(step.type==="sound"){
       try{const AC=window.AudioContext||(window as any).webkitAudioContext;if(AC){const ac=new AC();const osc=ac.createOscillator(),gain=ac.createGain();osc.frequency.value=step.seconds&&step.seconds<1?660:880;gain.gain.value=0.08;osc.connect(gain);gain.connect(ac.destination);osc.start();osc.stop(ac.currentTime+0.35);}}catch{}
