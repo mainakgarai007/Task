@@ -9,7 +9,8 @@ import {executeDirectTask,getCurrentLocation,reverseGeocodeIndia,searchAnime} fr
 function localISO(date:Date){return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);}
 function formatDateDMY(value:string){if(!value)return "";const m=value.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);return m?m[3]+"/"+m[2]+"/"+m[1]:value;}
 function parseDateDMY(value:string){const m=value.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);if(!m)return "";const day=Number(m[1]),month=Number(m[2]),year=Number(m[3]);const d=new Date(year,month-1,day);if(d.getFullYear()!==year||d.getMonth()!==month-1||d.getDate()!==day)return "";return year+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");}
-function formatDateTime(value:string){const d=new Date(value);if(Number.isNaN(d.getTime()))return value;return formatDateDMY(d.toISOString().slice(0,10))+", "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});}
+function localDateISO(date:Date){return date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0");}
+function formatDateTime(value:string){const d=new Date(value);if(Number.isNaN(d.getTime()))return value;return formatDateDMY(localDateISO(d))+", "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});}
 function DateField({value,onChange,placeholder="DD/MM/YYYY"}:{value:string;onChange:(value:string)=>void;placeholder?:string}){const [draft,setDraft]=useState(()=>formatDateDMY(value));useEffect(()=>setDraft(formatDateDMY(value)),[value]);function change(raw:string){const digits=raw.replace(/\\D/g,"").slice(0,8);let next=digits;if(digits.length>4)next=digits.slice(0,2)+"/"+digits.slice(2,4)+"/"+digits.slice(4);else if(digits.length>2)next=digits.slice(0,2)+"/"+digits.slice(2);setDraft(next);if(next==="")onChange("");else if(next.length===10){const iso=parseDateDMY(next);if(iso)onChange(iso);}}return <input type="text" inputMode="numeric" autoComplete="off" maxLength={10} value={draft} onChange={e=>change(e.target.value)} onBlur={()=>{if(draft&&draft.length===10&&!parseDateDMY(draft))setDraft(formatDateDMY(value));}} placeholder={placeholder} aria-label={placeholder}/>}
 function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string,intervalMinutes=60){
  const now=new Date(), d=new Date(date+"T"+time+":00");
@@ -157,7 +158,7 @@ function App(){
   const s:TaskSchedule=task.schedule||{time:""};
   setManualTitle(task.title);
   setManualTime(s.time||new Date(task.nextRun).toTimeString().slice(0,5));
-  setManualDate(s.startDate||new Date(task.nextRun).toISOString().slice(0,10));
+  setManualDate(s.startDate||localDateISO(new Date(task.nextRun)));
   setManualFrequency(task.frequency);
   setManualWeekday(String(s.weekday??1));
   setManualMonthDay(String(s.monthDay??1));
