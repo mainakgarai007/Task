@@ -54,6 +54,7 @@ export function evaluateConditionTree(
  values:{result:string;previousResult:string;changed:boolean;time?:string;day?:string}
 ):boolean{
  if(node.type!=="group")return evaluateCondition(node,values);
+ if(node.children.length===0)return false;
  const results=node.children.map(child=>evaluateConditionTree(child,values));
  const matched=node.join==="any"?results.some(Boolean):results.every(Boolean);
  return node.negated?!matched:matched;
