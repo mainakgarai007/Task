@@ -12,13 +12,16 @@ function parseDateDMY(value:string){const m=value.match(/^(\d{2})\\/(\d{2})\\/(\
 function localDateISO(date:Date){return date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0");}
 function formatDateTime(value:string){const d=new Date(value);if(Number.isNaN(d.getTime()))return value;return formatDateDMY(localDateISO(d))+", "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});}
 function DateField({value,onChange,placeholder="DD/MM/YYYY"}:{value:string;onChange:(value:string)=>void;placeholder?:string}){const [draft,setDraft]=useState(()=>formatDateDMY(value));useEffect(()=>setDraft(formatDateDMY(value)),[value]);function change(raw:string){const digits=raw.replace(/\\D/g,"").slice(0,8);let next=digits;if(digits.length>4)next=digits.slice(0,2)+"/"+digits.slice(2,4)+"/"+digits.slice(4);else if(digits.length>2)next=digits.slice(0,2)+"/"+digits.slice(2);setDraft(next);if(next==="")onChange("");else if(next.length===10){const iso=parseDateDMY(next);if(iso)onChange(iso);}}return <input type="text" inputMode="numeric" autoComplete="off" maxLength={10} value={draft} onChange={e=>change(e.target.value)} onBlur={()=>{if(draft&&draft.length===10&&!parseDateDMY(draft))setDraft(formatDateDMY(value));}} placeholder={placeholder} aria-label={placeholder}/>}
-function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string,intervalMinutes=60){
+function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string,intervalMinutes=60,weekdays:number[]=[Number(weekday)]){
  const now=new Date(), d=new Date(date+"T"+time+":00");
  if(frequency==="hourly"){if(d>now)return d.toISOString();const next=new Date(now);next.setMinutes(d.getMinutes(),0,0);if(next<=now)next.setHours(next.getHours()+1);return next.toISOString();}
  if(frequency==="custom"){if(d>now)return d.toISOString();return new Date(now.getTime()+Math.max(1,intervalMinutes)*60000).toISOString();}
  if(frequency==="daily"&&d<=now)d.setDate(d.getDate()+1);
  if(frequency==="weekly"){
-  const target=Number(weekday);const day=d.getDay();let delta=(target-day+7)%7;if(delta===0&&d<=now)delta=7;d.setDate(d.getDate()+delta);
+  const days=weekdays.length?weekdays:[Number(weekday)];
+  const day=d.getDay();let delta=7;
+  for(const target of days){const candidate=(Number(target)-day+7)%7;const step=candidate===0&&d<=now?7:candidate;if(step<delta)delta=step;}
+  d.setDate(d.getDate()+delta);
  }
  if(frequency==="monthly"){
   const wanted=Math.min(31,Math.max(1,Number(monthDay)||d.getDate()));
@@ -55,6 +58,7 @@ function App(){
  const [manualTime,setManualTime]=useState("19:00");
  const [manualFrequency,setManualFrequency]=useState<Frequency>("daily");
  const [manualWeekday,setManualWeekday]=useState("1");
+ const [manualWeekdays,setManualWeekdays]=useState<number[]>([1]);
  const [manualMonthDay,setManualMonthDay]=useState("1");
  const [manualType,setManualType]=useState<"reminder"|"weather"|"news"|"anime"|"movie"|"web">("reminder");
  const [manualMessage,setManualMessage]=useState("");
@@ -161,6 +165,7 @@ function App(){
   setManualDate(s.startDate||localDateISO(new Date(task.nextRun)));
   setManualFrequency(task.frequency);
   setManualWeekday(String(s.weekday??1));
+  setManualWeekdays(s.weekdays?.length?s.weekdays:[s.weekday??1]);
   setManualMonthDay(String(s.monthDay??1));
   setManualInterval(String(s.intervalMinutes??60));
   setManualEndDate(s.endDate||"");
@@ -212,7 +217,7 @@ function App(){
   setCreatorMode(mode);setCreator(true);setError("");
  }
  function resetManual(){
-  setManualTitle("");setManualDate(new Date().toISOString().slice(0,10));setManualTime("19:00");setManualFrequency("daily");setManualType("reminder");setManualMessage("");setManualLocation("");setWeatherSearch("");setWeatherPlaces([]);setManualWeatherCoords(null);setManualWeatherLocationMode("manual");setManualTopic("");setAnimeSearchResults([]);setSelectedAnimeId(undefined);setSelectedAnimeSource(undefined);setManualTopicPreset("Custom");setManualUrl("");setManualScope("all updates");setManualCategory("AI & tech");setManualRegion("India");setManualInterval("120");setManualEndDate("");setManualMaxRuns("");setManualNotifyChange(false);setManualCondition("");setManualStopCondition("");setManualConditionSource("result");setManualConditionOperator("contains");setManualConditionValue("");setManualStopSource("result");setManualStopOperator("contains");setManualStopValue("");setManualIfEnabled(false);setManualThen("notify");
+  setManualTitle("");setManualDate(new Date().toISOString().slice(0,10));setManualTime("19:00");setManualFrequency("daily");setManualWeekday("1");setManualWeekdays([1]);setManualType("reminder");setManualMessage("");setManualLocation("");setWeatherSearch("");setWeatherPlaces([]);setManualWeatherCoords(null);setManualWeatherLocationMode("manual");setManualTopic("");setAnimeSearchResults([]);setSelectedAnimeId(undefined);setSelectedAnimeSource(undefined);setManualTopicPreset("Custom");setManualUrl("");setManualScope("all updates");setManualCategory("AI & tech");setManualRegion("India");setManualInterval("120");setManualEndDate("");setManualMaxRuns("");setManualNotifyChange(false);setManualCondition("");setManualStopCondition("");setManualConditionSource("result");setManualConditionOperator("contains");setManualConditionValue("");setManualStopSource("result");setManualStopOperator("contains");setManualStopValue("");setManualIfEnabled(false);setManualThen("notify");
  }
  function makeManualTask(){
   setError("");
@@ -230,7 +235,7 @@ function App(){
   else if(manualType==="anime"){const topic=manualTopicPreset!=="Custom"?manualTopicPreset:manualTopic.trim();if(!topic)return setError("Choose or enter an anime title/topic.");action={type:"anime",topic,animeId:selectedAnimeId,animeSource:selectedAnimeSource,language:manualLanguage,scope:manualScope,conditionRule:ifRule,conditionThen:ifThen,notifyOnChange:manualNotifyChange};prompt="Get "+manualScope+" about "+topic+".";}
   else if(manualType==="movie"){const topic=manualTopicPreset!=="Custom"?manualTopicPreset:manualTopic.trim();if(!topic)return setError("Choose or enter a movie/topic.");action={type:"movie",topic,language:manualLanguage,scope:manualScope,conditionRule:ifRule,conditionThen:ifThen,notifyOnChange:manualNotifyChange};prompt="Get "+manualScope+" about "+topic+".";}
   else {if(!manualUrl.trim())return setError("Enter a URL.");action={type:"web",url:manualUrl.trim(),scope:manualScope,conditionRule:ifRule,conditionThen:ifThen,notifyOnChange:manualNotifyChange};prompt="Check this public URL for "+manualScope+": "+manualUrl.trim();}
-  const schedule:TaskSchedule={time:manualTime,startDate:manualDate,endDate:manualEndDate||undefined,weekday:manualFrequency==="weekly"?Number(manualWeekday):undefined,monthDay:manualFrequency==="monthly"?Number(manualMonthDay):undefined,intervalMinutes:manualFrequency==="custom"?Number(manualInterval):undefined,maxRuns:manualMaxRuns?Number(manualMaxRuns):undefined,notifyOnChange:manualNotifyChange};
+  const schedule:TaskSchedule={time:manualTime,startDate:manualDate,endDate:manualEndDate||undefined,weekday:manualFrequency==="weekly"?Number(manualWeekdays[0]??manualWeekday):undefined,weekdays:manualFrequency==="weekly"?manualWeekdays:undefined,monthDay:manualFrequency==="monthly"?Number(manualMonthDay):undefined,intervalMinutes:manualFrequency==="custom"?Number(manualInterval):undefined,maxRuns:manualMaxRuns?Number(manualMaxRuns):undefined,notifyOnChange:manualNotifyChange};
   const firstRun=buildFirstRun(manualDate,manualTime,manualFrequency,manualWeekday,manualMonthDay,Number(manualInterval));
   const existing=editingId?tasks.find(t=>t.id===editingId):undefined;
   if(existing){
@@ -277,7 +282,7 @@ function App(){
     <div className="sectionLabel">1 · Schedule</div>
     <div className="twoCols"><label>Time<input type="time" step="60" inputMode="numeric" value={manualTime} onChange={e=>setManualTime(e.target.value)} onInput={e=>setManualTime((e.target as HTMLInputElement).value)} /></label><label>Frequency<select value={manualFrequency} onChange={e=>setManualFrequency(e.target.value as Frequency)}><option value="once">Once</option><option value="hourly">Every hour</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="custom">Every X minutes</option></select></label></div>
     <label>{manualFrequency==="once"?"Date":"Start date"}<DateField value={manualDate} onChange={setManualDate}/></label>
-    {manualFrequency==="weekly"&&<label>Day<select value={manualWeekday} onChange={e=>setManualWeekday(e.target.value)}><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select></label>}
+    {manualFrequency==="weekly"&&<div className="weekdayPicker"><span className="fieldLabel">Days</span><div className="weekdayGrid">{[["0","Sun"],["1","Mon"],["2","Tue"],["3","Wed"],["4","Thu"],["5","Fri"],["6","Sat"]].map(([value,label])=><label className="dayChip" key={value}><input type="checkbox" checked={manualWeekdays.includes(Number(value))} onChange={()=>{const n=Number(value);setManualWeekdays(prev=>prev.includes(n)?prev.length===1?prev:prev.filter(x=>x!==n):[...prev,n].sort((a,b)=>a-b));setManualWeekday(value);}}/><span>{label}</span></label>)}</div><small className="hint">Select one or more days each week.</small></div>}
     {manualFrequency==="monthly"&&<label>Day of month<input type="number" min="1" max="31" value={manualMonthDay} onChange={e=>setManualMonthDay(e.target.value)}/></label>}
     {manualFrequency==="custom"&&<label>Every (minutes)<input type="number" min="1" value={manualInterval} onChange={e=>setManualInterval(e.target.value)} placeholder="e.g. 30"/></label>}
     {manualFrequency!=="once"&&<div className="twoCols"><label>End date (optional)<DateField value={manualEndDate} onChange={setManualEndDate}/></label><label>Max runs (optional)<input type="number" min="1" value={manualMaxRuns} onChange={e=>setManualMaxRuns(e.target.value)} placeholder="Unlimited"/></label></div>}
