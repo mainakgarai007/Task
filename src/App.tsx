@@ -281,7 +281,8 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
   setManualInterval(String(s.intervalMinutes??60));
   setManualEndDate(s.endDate||"");
   setManualMaxRuns(s.maxRuns?String(s.maxRuns):"");
-  setManualIfEnabled(Boolean(task.action?.conditionRule||task.action?.conditionRules?.length||task.action?.stopConditionRule));\n  setManualConditionTree(task.action?.conditionTree||legacyToConditionTree(task));
+  setManualIfEnabled(Boolean(task.action?.conditionRule||task.action?.conditionRules?.length||task.action?.stopConditionRule));
+  setManualConditionTree(task.action?.conditionTree||legacyToConditionTree(task));
   setManualSecondIfEnabled(Boolean(task.action?.conditionRules&&task.action.conditionRules.length>1));
   setManualSecondSource(task.action?.conditionRules?.[1]?.source||"day");
   setManualSecondOperator(task.action?.conditionRules?.[1]?.operator||"equals");
@@ -357,7 +358,10 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
   }
   let action:TaskAction;
   let prompt="";
-  const treeEnabled=manualIfEnabled&&conditionTreeHasLeaves(manualConditionTree);\n  const tree=treeEnabled?manualConditionTree:undefined;\n  const firstLeaf=tree?.children.find(x=>x.type!=="group") as TaskCondition|undefined;\n  const ifRule=manualIfEnabled&&manualConditionValue.trim()?{source:manualConditionSource,operator:manualConditionOperator,value:manualConditionValue.trim()}:firstLeaf;\n
+  const treeEnabled=manualIfEnabled&&conditionTreeHasLeaves(manualConditionTree);
+  const tree=treeEnabled?manualConditionTree:undefined;
+  const firstLeaf=tree?.children.find(x=>x.type!=="group") as TaskCondition|undefined;
+  const ifRule=manualIfEnabled&&manualConditionValue.trim()?{source:manualConditionSource,operator:manualConditionOperator,value:manualConditionValue.trim()}:firstLeaf;
   const secondRule=manualIfEnabled&&manualSecondIfEnabled&&manualSecondValue.trim()?{source:manualSecondSource,operator:manualSecondOperator,value:manualSecondValue.trim()}:undefined;
   const conditionRules=[...(ifRule?[ifRule]:[]),...(secondRule?[secondRule]:[])];
   const ifThen=conditionRules.length?manualThen:undefined;
