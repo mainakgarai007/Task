@@ -187,9 +187,18 @@ function App(){
    const conditionThen=task.action?.conditionThen||"notify";
    const conditionOk=conditionMatched&&(conditionThen==="notify"||conditionThen==="notify_and_stop"||conditionThen==="sound"||conditionThen==="create_task");
    const stopHit=(conditionMatched&&(conditionThen==="stop"||conditionThen==="notify_and_stop"))||(task.action?.stopConditionRule?evaluateCondition(task.action.stopConditionRule,conditionValues):Boolean(task.action?.stopCondition&&normalize(result).includes(normalize(task.action.stopCondition))));
-   const completed=task.frequency==="once" || stopHit || Boolean(task.schedule?.maxRuns && task.runCount+1>=task.schedule.maxRuns) || Boolean(task.schedule?.endDate && new Date(finished).toISOString().slice(0,10)>task.schedule.endDate);
+   const terminalAfterExecution=task.frequency==="once" || stopHit || Boolean(task.schedule?.maxRuns && task.runCount+1>=task.schedule.maxRuns) || Boolean(task.schedule?.endDate && new Date(finished).toISOString().slice(0,10)>task.schedule.endDate);
+   const requiresAcknowledgement=task.notificationMode==="see"||task.notificationMode==="completed";
+   const completed=terminalAfterExecution&&!requiresAcknowledgement;
    const recurringNext=manual&&task.frequency!=="once"?(()=>{let candidate=new Date(task.nextRun),guard=0;while(candidate.getTime()<=Date.now()&&guard++<1000)candidate=new Date(nextRun(candidate,task.frequency,task.schedule));return candidate.toISOString();})():nextRun(new Date(),task.frequency,task.schedule);
-   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:recurringNext}:t));
+   const sequenceValue=task.sequence?.enabled?task.sequence.current:undefined;
+   const acknowledgement:TaskAcknowledgement|undefined=requiresAcknowledgement?{id:uid(),executionId:record.id,mode:task.notificationMode==="completed"?"completed":"see",status:"pending",createdAt:finished,remindEveryMinutes:task.notificationMode==="completed"?Math.max(1,task.remindIfNotCompletedMinutes||5):undefined,nextReminderAt:task.notificationMode==="completed"?new Date(Date.now()+Math.max(1,task.remindIfNotCompletedMinutes||5)*60000).toISOString():undefined,sequenceValue}:undefined;
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement}:t));
+   if(acknowledgement){
+    const label=sequenceValue!=null?"Step "+sequenceValue+" · ":"";
+    if(task.notificationMode==="see")await notify("Task update",task.title+"\n"+label+result.slice(0,300),{taskId:task.id,ackId:acknowledgement.id,actions:[{action:"see",title:"See it"}]});
+    else await notify("Task reminder",task.title+"\n"+label+result.slice(0,300),{taskId:task.id,ackId:acknowledgement.id,actions:[{action:"completed",title:"Completed"}]});
+   }
    if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))){
     if(conditionThen==="notify"||conditionThen==="notify_and_stop") await notify("Task completed",task.title+"\n"+result.slice(0,300));
     if(conditionThen==="sound"||conditionThen==="notify_and_stop"){
