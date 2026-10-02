@@ -54,11 +54,23 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
  }
 
  if(frequency==="monthly"){
-  const wanted=Math.min(31,Math.max(1,Number(schedule?.monthDay)||d.getDate()));
-  const nextMonth=new Date(d.getFullYear(),d.getMonth()+1,1);
-  const lastDay=new Date(nextMonth.getFullYear(),nextMonth.getMonth()+1,0).getDate();
-  d.setFullYear(nextMonth.getFullYear(),nextMonth.getMonth(),Math.min(wanted,lastDay));
-  setLocalTime(d,schedule?.time);
+  const months=(schedule?.months?.length?schedule.months:[d.getMonth()]).map(n=>Math.min(11,Math.max(0,Number(n)))).sort((a,b)=>a-b);
+  const days=(schedule?.monthDays?.length?schedule.monthDays:[Number(schedule?.monthDay)||d.getDate()]).map(n=>Math.min(31,Math.max(1,Number(n)))).sort((a,b)=>a-b);
+  const baseYear=d.getFullYear();
+  let found:Date|undefined;
+  for(let offset=0;offset<24&&!found;offset++){
+   const probeMonth=d.getMonth()+offset;
+   const year=baseYear+Math.floor(probeMonth/12);
+   const month=probeMonth%12;
+   if(!months.includes(month))continue;
+   const lastDay=new Date(year,month+1,0).getDate();
+   for(const day of days){
+    const candidate=new Date(year,month,Math.min(day,lastDay));
+    setLocalTime(candidate,schedule?.time);
+    if(candidate.getTime()>d.getTime()){found=candidate;break;}
+   }
+  }
+  if(found)d.setTime(found.getTime());
  }
 
  if(frequency==="custom"){
