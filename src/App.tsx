@@ -185,7 +185,7 @@ function App(){
    if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+result.slice(0,300));
    if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))){
     let chain:TaskThenAction[]=task.action?.thenActions?.length?task.action.thenActions:[];
-    if(!chain.length){if(conditionThen==="notify_and_stop")chain=[{type:"notify"},{type:"stop"}];else if(conditionThen==="wait")chain=[{type:"wait",minutes:conditionWaitMinutes}];else if(conditionThen==="notify"||conditionThen==="stop"||conditionThen==="sound"||conditionThen==="create_task")chain=[{type:conditionThen}];}
+    if(!chain.length){if(conditionThen==="notify_and_stop")chain=[{type:"notify"},{type:"stop"}];else if(conditionThen==="wait")chain=[{type:"wait",minutes:conditionWaitMinutes}];else if(conditionThen==="notify"||conditionThen==="sound"||conditionThen==="create_task")chain=[{type:conditionThen}];}
     for(const rawStep of chain){
      const step:TaskThenAction=rawStep;
      if(step.type==="notify"||step.type==="reminder") await notify(step.type==="reminder"?"Reminder":"Task completed",step.message?.trim()||task.title+"\n"+result.slice(0,300));
