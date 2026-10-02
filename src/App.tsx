@@ -286,6 +286,8 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
   setManualWeekday(String(s.weekday??1));
   setManualWeekdays(task.frequency==="daily"?(s.weekdays?.length?s.weekdays:[0,1,2,3,4,5,6]):(s.weekdays?.length?s.weekdays:[s.weekday??1]));
   setManualMonthDay(String(s.monthDay??1));
+  setManualMonths(task.frequency==="monthly"?(s.months?.length?s.months:Array.from({length:12},(_,i)=>i)):Array.from({length:12},(_,i)=>i));
+  setManualMonthDays(task.frequency==="monthly"?(s.monthDays?.length?s.monthDays:[s.monthDay??1]):[1]);
   setManualInterval(String(s.intervalMinutes??60));
   setManualEndDate(s.endDate||"");
   setManualMaxRuns(s.maxRuns?String(s.maxRuns):"");
