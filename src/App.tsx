@@ -13,15 +13,30 @@ function localDateISO(date:Date){return date.getFullYear()+"-"+String(date.getMo
 function formatDateTime(value:string){const d=new Date(value);if(Number.isNaN(d.getTime()))return value;return formatDateDMY(localDateISO(d))+", "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});}
 function DateField({value,onChange,placeholder="DD/MM/YYYY"}:{value:string;onChange:(value:string)=>void;placeholder?:string}){const [draft,setDraft]=useState(()=>formatDateDMY(value));useEffect(()=>setDraft(formatDateDMY(value)),[value]);function change(raw:string){const digits=raw.replace(/\D/g,"").slice(0,8);let next=digits;if(digits.length>4)next=digits.slice(0,2)+"/"+digits.slice(2,4)+"/"+digits.slice(4);else if(digits.length>2)next=digits.slice(0,2)+"/"+digits.slice(2);setDraft(next);if(next==="")onChange("");else if(next.length===10){const iso=parseDateDMY(next);if(iso)onChange(iso);}}return <input type="text" inputMode="numeric" autoComplete="off" maxLength={10} value={draft} onChange={e=>change(e.target.value)} onBlur={()=>{if(draft&&draft.length===10&&!parseDateDMY(draft))setDraft(formatDateDMY(value));}} placeholder={placeholder} aria-label={placeholder}/>}
 function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string,intervalMinutes=60,weekdays:number[]=[Number(weekday)]){
- const now=new Date(), d=new Date(date+"T"+time+":00");
- if(frequency==="hourly"){if(d>now)return d.toISOString();const next=new Date(now);next.setMinutes(d.getMinutes(),0,0);if(next<=now)next.setHours(next.getHours()+1);return next.toISOString();}
- if(frequency==="custom"){if(d>now)return d.toISOString();return new Date(now.getTime()+Math.max(1,intervalMinutes)*60000).toISOString();}
- if(frequency==="daily"&&d<=now)d.setDate(d.getDate()+1);
- if(frequency==="weekly"){
+ const now=new Date();
+ if(frequency==="hourly"){
+  const start=new Date(date+"T00:00:00");
+  if(start.getTime()>now.getTime())return start.toISOString();
+  return new Date(now.getTime()+60*60*1000).toISOString();
+ }
+ if(frequency==="custom"){
+  const start=new Date(date+"T00:00:00");
+  const interval=Math.max(1,intervalMinutes)*60000;
+  if(start.getTime()>now.getTime())return new Date(start.getTime()+interval).toISOString();
+  return new Date(now.getTime()+interval).toISOString();
+ }
+ const d=new Date(date+"T"+(time||"00:00")+":00");
+ if(frequency==="daily"||frequency==="weekly"){
   const days=weekdays.length?weekdays:[Number(weekday)];
-  const day=d.getDay();let delta=7;
-  for(const target of days){const candidate=(Number(target)-day+7)%7;const step=candidate===0&&d<=now?7:candidate;if(step<delta)delta=step;}
+  const current=d.getDay();
+  let delta=7;
+  for(const target of days){
+   const candidate=(Number(target)-current+7)%7;
+   const step=candidate===0?(d.getTime()<=now.getTime()?7:0):candidate;
+   if(step<delta)delta=step;
+  }
   d.setDate(d.getDate()+delta);
+  return d.toISOString();
  }
  if(frequency==="monthly"){
   const wanted=Math.min(31,Math.max(1,Number(monthDay)||d.getDate()));
@@ -228,7 +243,7 @@ function App(){
   setManualDate(s.startDate||localDateISO(new Date(task.nextRun)));
   setManualFrequency(task.frequency);
   setManualWeekday(String(s.weekday??1));
-  setManualWeekdays(s.weekdays?.length?s.weekdays:[s.weekday??1]);
+  setManualWeekdays(task.frequency==="daily"?(s.weekdays?.length?s.weekdays:[0,1,2,3,4,5,6]):(s.weekdays?.length?s.weekdays:[s.weekday??1]));
   setManualMonthDay(String(s.monthDay??1));
   setManualInterval(String(s.intervalMinutes??60));
   setManualEndDate(s.endDate||"");
@@ -298,6 +313,14 @@ function App(){
   if(manualFrequency==="once"&&new Date(manualDate+"T"+manualTime+":00")<=new Date())return setError("Choose a future time.");
   if(manualFrequency==="custom"&&Number(manualInterval)<1)return setError("Custom interval must be at least 1 minute.");
   if(manualMaxRuns&&Number(manualMaxRuns)<1)return setError("Maximum runs must be at least 1.");
+  if(manualSequenceEnabled){
+   const start=Math.max(1,Number(manualSequenceCurrent)||1);
+   const end=Math.max(1,Number(manualSequenceEnd)||1);
+   const step=Math.max(1,Number(manualSequenceStep)||1);
+   if(end<start)return setError("Sequence end must be greater than or equal to the starting number.");
+   if(manualNotificationMode!=="completed")return setError("Sequence requires the Completed notification mode so each step advances only after you mark it completed.");
+   if(!Number.isFinite(step)||step<1)return setError("Sequence step must be at least 1.");
+  }
   let action:TaskAction;
   let prompt="";
   const ifRule=manualIfEnabled&&manualConditionValue.trim()?{source:manualConditionSource,operator:manualConditionOperator,value:manualConditionValue.trim()}:undefined;
@@ -311,7 +334,7 @@ function App(){
   else if(manualType==="movie"){const topic=manualTopicPreset!=="Custom"?manualTopicPreset:manualTopic.trim();if(!topic)return setError("Choose or enter a movie/topic.");action={type:"movie",topic,language:manualLanguage,scope:manualScope,conditionRule:ifRule,conditionThen:ifThen,notifyOnChange:manualNotifyChange};prompt="Get "+manualScope+" about "+topic+".";}
   else {if(!manualUrl.trim())return setError("Enter a URL.");action={type:"web",url:manualUrl.trim(),scope:manualScope,conditionRule:ifRule,conditionThen:ifThen,notifyOnChange:manualNotifyChange};prompt="Check this public URL for "+manualScope+": "+manualUrl.trim();}
   action={...action,conditionRule:ifRule,conditionRules:conditionRules.length?conditionRules:undefined,conditionJoin:conditionRules.length>1?"all":undefined,conditionThen:ifThen,notifyOnChange:manualNotifyChange};
-  const schedule:TaskSchedule={time:manualTime,startDate:manualDate,endDate:manualEndDate||undefined,weekday:manualFrequency==="weekly"?Number(manualWeekdays[0]??manualWeekday):undefined,weekdays:manualFrequency==="weekly"?manualWeekdays:undefined,monthDay:manualFrequency==="monthly"?Number(manualMonthDay):undefined,intervalMinutes:manualFrequency==="custom"?Number(manualInterval):undefined,maxRuns:manualMaxRuns?Number(manualMaxRuns):undefined,notifyOnChange:manualNotifyChange};
+  const schedule:TaskSchedule={time:(manualFrequency==="hourly"||manualFrequency==="custom")?"":manualTime,startDate:manualDate,endDate:manualEndDate||undefined,weekday:(manualFrequency==="daily"||manualFrequency==="weekly")?Number(manualWeekdays[0]??manualWeekday):undefined,weekdays:(manualFrequency==="daily"||manualFrequency==="weekly")?manualWeekdays:undefined,monthDay:manualFrequency==="monthly"?Number(manualMonthDay):undefined,intervalMinutes:manualFrequency==="custom"?Number(manualInterval):undefined,maxRuns:manualMaxRuns?Number(manualMaxRuns):undefined,notifyOnChange:manualNotifyChange};
   const firstRun=buildFirstRun(manualDate,manualTime,manualFrequency,manualWeekday,manualMonthDay,Number(manualInterval),manualWeekdays);
   const sequence=manualSequenceEnabled?{enabled:true,current:Math.max(1,Number(manualSequenceCurrent)||1),end:Math.max(1,Number(manualSequenceEnd)||1),step:Math.max(1,Number(manualSequenceStep)||1)}:undefined;
   const ackConfig={notificationMode:manualNotificationMode,remindIfNotCompletedMinutes:manualNotificationMode==="completed"?Math.max(1,Number(manualRemindMinutes)||5):undefined,sequence};
@@ -358,9 +381,9 @@ function App(){
    {creatorMode==="manual"&&<><div className="sheetHead"><div><div className="eyebrow">{editingId?"EDIT TASK":"MANUAL TASK"}</div><h2>{editingId?"Edit task":"Build it yourself"}</h2></div><button onClick={()=>{setCreator(false);setEditingId(null)}}>×</button></div>
     <label>Task name<input value={manualTitle} onChange={e=>setManualTitle(e.target.value)} placeholder="e.g. Morning weather"/></label>
     <div className="sectionLabel">1 · Schedule</div>
-    <div className="twoCols"><label>Time<input type="time" step="60" inputMode="numeric" value={manualTime} onChange={e=>setManualTime(e.target.value)} onInput={e=>setManualTime((e.target as HTMLInputElement).value)} /></label><label>Frequency<select value={manualFrequency} onChange={e=>setManualFrequency(e.target.value as Frequency)}><option value="once">Once</option><option value="hourly">Every hour</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="custom">Every X minutes</option></select></label></div>
+    <div className="twoCols">{manualFrequency!=="hourly"&&manualFrequency!=="custom"&&<label>Time<input type="time" step="60" inputMode="numeric" value={manualTime} onChange={e=>setManualTime(e.target.value)} onInput={e=>setManualTime((e.target as HTMLInputElement).value)} /></label>}<label>Frequency<select value={manualFrequency} onChange={e=>{const f=e.target.value as Frequency;setManualFrequency(f);if(f==="daily"&&manualFrequency!=="daily"&&manualWeekdays.length===1&&manualWeekdays[0]===1)setManualWeekdays([0,1,2,3,4,5,6]);if(f==="weekly"&&manualFrequency!=="weekly"&&manualWeekdays.length===7)setManualWeekdays([1]);}}><option value="once">Once</option><option value="hourly">Every hour</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="custom">Every X minutes</option></select></label></div>
     <label>{manualFrequency==="once"?"Date":"Start date"}<DateField value={manualDate} onChange={setManualDate}/></label>
-    {manualFrequency==="weekly"&&<div className="weekdayPicker"><span className="fieldLabel">Days</span><div className="weekdayGrid">{[["0","Sun"],["1","Mon"],["2","Tue"],["3","Wed"],["4","Thu"],["5","Fri"],["6","Sat"]].map(([value,label])=><label className="dayChip" key={value}><input type="checkbox" checked={manualWeekdays.includes(Number(value))} onChange={()=>{const n=Number(value);setManualWeekdays(prev=>prev.includes(n)?prev.length===1?prev:prev.filter(x=>x!==n):[...prev,n].sort((a,b)=>a-b));setManualWeekday(value);}}/><span>{label}</span></label>)}</div><small className="hint">Select one or more days each week.</small></div>}
+    {(manualFrequency==="daily"||manualFrequency==="weekly")&&<div className="weekdayPicker"><span className="fieldLabel">Days</span><div className="weekdayGrid">{[["0","Sun"],["1","Mon"],["2","Tue"],["3","Wed"],["4","Thu"],["5","Fri"],["6","Sat"]].map(([value,label])=><label className="dayChip" key={value}><input type="checkbox" checked={manualWeekdays.includes(Number(value))} onChange={()=>{const n=Number(value);setManualWeekdays(prev=>prev.includes(n)?prev.length===1?prev:prev.filter(x=>x!==n):[...prev,n].sort((a,b)=>a-b));setManualWeekday(value);}}/><span>{label}</span></label>)}</div><div className="dayPresets"><button type="button" onClick={()=>setManualWeekdays([1,2,3,4,5])}>Mon–Fri</button><button type="button" onClick={()=>setManualWeekdays([0,1,2,3,4,5,6])}>All days</button><button type="button" onClick={()=>setManualWeekdays([0,6])}>Weekend</button></div><small className="hint">{manualFrequency==="daily"?"Every day is customizable — choose exactly which days should run.":"Select one or more days each week."}</small></div>}
     {manualFrequency==="monthly"&&<label>Day of month<input type="number" min="1" max="31" value={manualMonthDay} onChange={e=>setManualMonthDay(e.target.value)}/></label>}
     {manualFrequency==="custom"&&<label>Every (minutes)<input type="number" min="1" value={manualInterval} onChange={e=>setManualInterval(e.target.value)} placeholder="e.g. 30"/></label>}
     {manualFrequency!=="once"&&<div className="twoCols"><label>End date (optional)<DateField value={manualEndDate} onChange={setManualEndDate}/></label><label>Max runs (optional)<input type="number" min="1" value={manualMaxRuns} onChange={e=>setManualMaxRuns(e.target.value)} placeholder="Unlimited"/></label></div>}
@@ -375,10 +398,11 @@ function App(){
     {manualType==="news"&&<label>Category<select value={manualCategory} onChange={e=>setManualCategory(e.target.value)}><option>AI & tech</option><option>Gaming</option><option>Science & space</option><option>India & world</option><option>Entertainment</option><option>Custom</option></select></label>}
     {manualType==="web"&&<label>Public URL / RSS URL<input value={manualUrl} onChange={e=>setManualUrl(e.target.value)} placeholder="https://example.com/feed.xml"/></label>}
     <div className="sectionLabel">3 · Notification acknowledgement</div>
-    <label>Notification mode<select value={manualNotificationMode} onChange={e=>setManualNotificationMode(e.target.value as NotificationMode)}><option value="disable">🔕 Disable</option><option value="see">👀 See it</option><option value="completed">✅ Completed</option></select></label>
+    <label>Notification mode<select value={manualNotificationMode} onChange={e=>{const mode=e.target.value as NotificationMode;if(manualSequenceEnabled&&mode!=="completed"){setError("Sequence needs Completed mode.");return;}setManualNotificationMode(mode);}}><option value="disable">🔕 Disable</option><option value="see">👀 See it</option><option value="completed">✅ Completed</option></select></label>
     {manualNotificationMode==="completed"&&<label>Remind me if not completed<select value={manualRemindMinutes} onChange={e=>setManualRemindMinutes(e.target.value)}><option value="1">1 minute</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option></select></label>}
     <div className="sectionLabel">4 · Sequence / chain</div>
-    <label className="checkRow"><input type="checkbox" checked={manualSequenceEnabled} onChange={e=>setManualSequenceEnabled(e.target.checked)}/><span>Enable universal sequence</span></label>
+    <label className="checkRow"><input type="checkbox" checked={manualSequenceEnabled} onChange={e=>{const on=e.target.checked;setManualSequenceEnabled(on);if(on)setManualNotificationMode("completed");}}/><span>Enable universal sequence</span></label>
+    {manualSequenceEnabled&&<p className="hint sequenceHint">Sequence advances only after you press <b>Completed</b>. Notification mode is locked to Completed while sequence is enabled.</p>}
     {manualSequenceEnabled&&<div className="twoCols"><label>Starting number<input type="number" min="1" value={manualSequenceCurrent} onChange={e=>setManualSequenceCurrent(e.target.value)}/></label><label>End number<input type="number" min="1" value={manualSequenceEnd} onChange={e=>setManualSequenceEnd(e.target.value)}/></label><label>Step<input type="number" min="1" value={manualSequenceStep} onChange={e=>setManualSequenceStep(e.target.value)}/></label></div>}
     <div className="automationRules"><div className="sectionLabel">5 · IF / THEN</div><label className="checkRow"><input type="checkbox" checked={manualIfEnabled} onChange={e=>setManualIfEnabled(e.target.checked)}/><span>Enable IF / THEN automation</span></label>{manualIfEnabled&&<><div className="ruleBox"><strong>IF</strong><div className="threeCols"><select value={manualConditionSource} onChange={e=>setManualConditionSource(e.target.value as any)}><option value="result">Current result</option><option value="previousResult">Previous result</option><option value="changed">Changed state</option><option value="time">Current time</option><option value="day">Day of week</option></select><select value={manualConditionOperator} onChange={e=>setManualConditionOperator(e.target.value as any)}><option value="contains">contains</option><option value="not_contains">does not contain</option><option value="equals">equals</option><option value="not_equals">does not equal</option><option value="starts_with">starts with</option><option value="ends_with">ends with</option><option value="greater_than">greater than</option><option value="less_than">less than</option><option value="greater_or_equal">greater/equal</option><option value="less_or_equal">less/equal</option></select><input value={manualConditionValue} onChange={e=>setManualConditionValue(e.target.value)} placeholder="value"/></div></div><label>THEN<select value={manualThen} onChange={e=>setManualThen(e.target.value as "notify"|"stop"|"notify_and_stop"|"sound"|"create_task")}><option value="notify">🔔 Notify me</option><option value="stop">⏹️ Stop this task</option><option value="notify_and_stop">🔔 Notify + stop</option><option value="sound">🔊 Play a sound</option><option value="create_task">🤖 Create a follow-up task with AI</option></select></label>
  {manualIfEnabled&&<div className="ruleBox"><label className="checkRow"><input type="checkbox" checked={manualSecondIfEnabled} onChange={e=>setManualSecondIfEnabled(e.target.checked)}/><span>＋ Add another IF condition (AND)</span></label>{manualSecondIfEnabled&&<div className="threeCols"><select value={manualSecondSource} onChange={e=>setManualSecondSource(e.target.value as any)}><option value="result">Current result</option><option value="previousResult">Previous result</option><option value="changed">Changed state</option><option value="time">Current time</option><option value="day">Day of week</option></select><select value={manualSecondOperator} onChange={e=>setManualSecondOperator(e.target.value as any)}><option value="equals">equals</option><option value="contains">contains</option><option value="not_equals">does not equal</option><option value="greater_than">greater than</option><option value="less_than">less than</option><option value="greater_or_equal">greater/equal</option><option value="less_or_equal">less/equal</option></select><input value={manualSecondValue} onChange={e=>setManualSecondValue(e.target.value)} placeholder="e.g. Sunday or 17:00"/></div>}</div>}</>}<label className="checkRow"><input type="checkbox" checked={manualNotifyChange} onChange={e=>setManualNotifyChange(e.target.checked)}/><span>Notify only when the result changes</span></label></div>
