@@ -53,8 +53,14 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - THEN actions: notify, reminder, wait, sound, open link, create task, run task, save result, stop and complete
 - Direct execution for supported public-data tasks
 - AI execution when reasoning/generation is actually required
-- Result comparison
-- Notify only when a result changes
+- Meaningful change detection with normalized comparisons
+- New-item detection (added lines/items)
+- Removed-item detection
+- Updated-content detection
+- Mixed added/removed change summaries
+- Previous/current change snapshots stored with execution history
+- IF/THEN access to new-items and removed-items conditions
+- Notify only when a meaningful result changes
 - Optional legacy condition/stop-condition compatibility
 - Previous-run context for AI tasks
 
