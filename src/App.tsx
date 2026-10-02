@@ -121,7 +121,7 @@ function App(){
   setTasks(ts=>ts.map(t=>{
    if(t.id!==taskId||t.pendingAcknowledgement?.id!==ackId)return t;
    const pending=t.pendingAcknowledgement;
-   const ack={...pending,status:mode==="completed"?"completed":"seen",updatedAt:now,nextReminderAt:undefined};
+   const ack:TaskAcknowledgement={...pending,status:mode==="completed"?"completed":"seen",updatedAt:now,nextReminderAt:undefined};
    let sequence=t.sequence;
    let completed=t.status==="completed";
    let enabled=t.enabled;
