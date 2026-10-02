@@ -17,7 +17,8 @@ export function normalizeTasks(value:unknown):Task[]{
   const action=isRecord(item.action)?item.action as TaskAction:{type:"reminder" as const,message:typeof item.prompt==="string"?item.prompt:""};
   const safeAction:TaskAction={...action,type:["reminder","weather","news","anime","movie","web","ai"].includes(action.type)?action.type:"reminder"};
   const schedule=isRecord(item.schedule)?item.schedule as TaskSchedule:undefined;
-  const executionState=item.executionState==="running"||item.executionState==="waiting"?item.executionState:"idle";
+  // A browser reload destroys the in-memory execution, so never restore a stale running state.
+  const executionState=item.executionState==="waiting"?"waiting":"idle";
   return {
    ...item,
    prompt:typeof item.prompt==="string"?item.prompt:"",
