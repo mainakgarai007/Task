@@ -36,6 +36,8 @@ export interface TaskAction{
  condition?:string;
  stopCondition?:string;
  conditionRule?:TaskCondition;
+ conditionRules?:TaskCondition[];
+ conditionJoin?:"all"|"any";
  conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task";
  stopConditionRule?:TaskCondition;
  notifyOnChange?:boolean;
