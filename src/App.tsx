@@ -114,6 +114,52 @@ function App(){
  useEffect(()=>{if(manualType!=="anime"){setAnimeSearchResults([]);return;}const q=manualTopic.trim();if(!q){setAnimeSearchResults([]);return;}const timer=setTimeout(async()=>{setAnimeSearchBusy(true);try{setAnimeSearchResults(await searchAnime(q));}catch{setAnimeSearchResults([]);}finally{setAnimeSearchBusy(false);}},350);return()=>clearTimeout(timer);},[manualTopic,manualType]);
 
 
+ async function acknowledgeTask(taskId:string,ackId:string,action:"seen"|"completed"){
+  const now=new Date().toISOString();
+  const current=tasksRef.current.find(t=>t.id===taskId);
+  if(!current?.pendingAcknowledgement||current.pendingAcknowledgement.id!==ackId)return;
+  setTasks(ts=>ts.map(t=>{
+   if(t.id!==taskId||t.pendingAcknowledgement?.id!==ackId)return t;
+   const pending=t.pendingAcknowledgement;
+   const acknowledged={...pending,status:action==="completed"?"completed":"seen",updatedAt:now,nextReminderAt:undefined};
+   const sequence=t.sequence;
+   let nextSequence=sequence;
+   let completed=t.status==="completed";
+   let enabled=t.enabled;
+   if(action==="completed"){
+    if(sequence?.enabled){
+     const next=sequence.current+sequence.step;
+     if(next>sequence.end){nextSequence={...sequence,current:sequence.end};completed=true;enabled=false;}
+     else nextSequence={...sequence,current:next};
+    }else if(t.frequency==="once"||t.action?.conditionThen==="stop"||Boolean(t.schedule?.maxRuns&&t.runCount>=t.schedule.maxRuns)){
+     completed=true;enabled=false;
+    }
+   }
+   return {...t,pendingAcknowledgement:undefined,acknowledgements:[acknowledged,...(t.acknowledgements||[])].slice(0,50),sequence:nextSequence,status:completed?"completed":t.status,enabled};
+  }));
+ }
+ useEffect(()=>{
+  const handler=(event:MessageEvent)=>{
+   const data=event.data||{};
+   if(data.type==="task-ack"&&(data.action==="see"||data.action==="completed"))acknowledgeTask(data.taskId,data.ackId,data.action);
+  };
+  navigator.serviceWorker?.addEventListener("message",handler);
+  return()=>navigator.serviceWorker?.removeEventListener("message",handler);
+ },[]);
+ useEffect(()=>{
+  const timer=setInterval(()=>{
+   const now=Date.now();
+   tasksRef.current.forEach(t=>{
+    const p=t.pendingAcknowledgement;
+    if(p?.status==="pending"&&p.mode==="completed"&&p.nextReminderAt&&new Date(p.nextReminderAt).getTime()<=now){
+     const minutes=Math.max(1,t.remindIfNotCompletedMinutes||5);
+     notify("Task reminder",t.title+"\nStill waiting for completion.",{taskId:t.id,ackId:p.id,actions:[{action:"completed",title:"Completed"}]});
+     setTasks(ts=>ts.map(x=>x.id===t.id&&x.pendingAcknowledgement?.id===p.id?{...x,pendingAcknowledgement:{...p,nextReminderAt:new Date(now+minutes*60000).toISOString()}}:x));
+    }
+   });
+  },15000);
+  return()=>clearInterval(timer);
+ },[]);
  async function executeTask(id:string,manual=false){
   if(executionLocks.current.has(id))return;
   const task=tasks.find(x=>x.id===id);if(!task||!task.enabled||task.status==="completed"||task.executionState==="running")return;
