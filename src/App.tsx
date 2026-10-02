@@ -184,7 +184,8 @@ function App(){
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!executionEnded,status:executionEnded?"completed":"active",nextRun:executionEnded?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement}:t));
    if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+result.slice(0,300));
    if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))){
-    const chain:TaskThenAction[]=task.action?.thenActions?.length?task.action.thenActions:(conditionThen==="notify_and_stop"?([{type:"notify"},{type:"stop"}] as TaskThenAction[]):conditionThen==="wait"?([{type:"wait",minutes:conditionWaitMinutes}] as TaskThenAction[]):[{type:conditionThen as TaskThenAction["type"]}]);
+    let chain:TaskThenAction[]=task.action?.thenActions?.length?task.action.thenActions:[];
+    if(!chain.length){if(conditionThen==="notify_and_stop")chain=[{type:"notify"},{type:"stop"}];else if(conditionThen==="wait")chain=[{type:"wait",minutes:conditionWaitMinutes}];else if(conditionThen==="notify"||conditionThen==="stop"||conditionThen==="sound"||conditionThen==="create_task")chain=[{type:conditionThen}];}
     for(const step of chain){
      if(step.type==="notify"||step.type==="reminder") await notify(step.type==="reminder"?"Reminder":"Task completed",step.message?.trim()||task.title+"\n"+result.slice(0,300));
      else if(step.type==="sound"){
