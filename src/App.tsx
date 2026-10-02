@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from "react";
-import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule,NotificationMode,TaskAcknowledgement,TaskThenAction,TaskCondition,TaskConditionGroup,TaskConditionNode,ConditionField} from "./types";
+import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule,NotificationMode,TaskAcknowledgement,TaskThenAction,TaskCondition,TaskConditionGroup,TaskConditionNode,ConditionField,TaskChange} from "./types";
 import {loadTasks,saveTasks,uid,normalizeTasks} from "./storage";
 import {nextRun,notify} from "./scheduler";
 import {evaluateCondition,evaluateConditionTree} from "./conditions";
@@ -11,6 +11,26 @@ function formatDateDMY(value:string){if(!value)return "";const m=value.match(/^(
 function parseDateDMY(value:string){const m=value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return "";const day=Number(m[1]),month=Number(m[2]),year=Number(m[3]);const d=new Date(year,month-1,day);if(d.getFullYear()!==year||d.getMonth()!==month-1||d.getDate()!==day)return "";return year+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");}
 function localDateISO(date:Date){return date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0");}
 function formatDateTime(value:string){const d=new Date(value);if(Number.isNaN(d.getTime()))return value;return formatDateDMY(localDateISO(d))+", "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});}
+function normalizeChangeLine(value:string){
+ return value.replace(/^\s*(?:[-*•]+|\d+[.)])\s*/,"").replace(/\s+/g," ").trim().toLowerCase();
+}
+function extractChangeItems(value:string){
+ return value.split(/\n+/).map(x=>x.trim()).filter(Boolean).map(normalizeChangeLine).filter(x=>x.length>2);
+}
+function detectMeaningfulChange(previous:string,current:string,detectedAt:string):TaskChange{
+ const prev=previous.trim(),now=current.trim();
+ if(!prev)return {kind:"none",changed:false,newItems:[],removedItems:[],summary:"First result saved; no previous result to compare.",detectedAt};
+ if(normalizeChangeLine(prev)===normalizeChangeLine(now))return {kind:"none",changed:false,newItems:[],removedItems:[],summary:"No meaningful change detected.",detectedAt};
+ const oldItems=[...new Set(extractChangeItems(prev))],newItemsAll=[...new Set(extractChangeItems(now))];
+ const oldSet=new Set(oldItems),newSet=new Set(newItemsAll);
+ const added=newItemsAll.filter(x=>!oldSet.has(x)),removed=oldItems.filter(x=>!newSet.has(x));
+ const kind=added.length&&removed.length?"mixed":added.length?"new_items":removed.length?"removed_items":"updated";
+ const parts:string[]=[];
+ if(added.length)parts.push("New: "+added.slice(0,5).join(" | "));
+ if(removed.length)parts.push("Removed: "+removed.slice(0,5).join(" | "));
+ if(!parts.length)parts.push("Updated content detected.");
+ return {kind,changed:true,newItems:added,removedItems:removed,summary:parts.join(" · "),detectedAt};
+}
 function DateField({value,onChange,placeholder="DD/MM/YYYY"}:{value:string;onChange:(value:string)=>void;placeholder?:string}){const [draft,setDraft]=useState(()=>formatDateDMY(value));useEffect(()=>setDraft(formatDateDMY(value)),[value]);function change(raw:string){const digits=raw.replace(/\D/g,"").slice(0,8);let next=digits;if(digits.length>4)next=digits.slice(0,2)+"/"+digits.slice(2,4)+"/"+digits.slice(4);else if(digits.length>2)next=digits.slice(0,2)+"/"+digits.slice(2);setDraft(next);if(next==="")onChange("");else if(next.length===10){const iso=parseDateDMY(next);if(iso)onChange(iso);}}return <input type="text" inputMode="numeric" autoComplete="off" maxLength={10} value={draft} onChange={e=>change(e.target.value)} onBlur={()=>{if(draft&&draft.length===10&&!parseDateDMY(draft))setDraft(formatDateDMY(value));}} placeholder={placeholder} aria-label={placeholder}/>}
 function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string,intervalMinutes=60,weekdays:number[]=[Number(weekday)],months:number[]=Array.from({length:12},(_,i)=>i),monthDays:number[]=[Number(monthDay)||1]){
  const now=new Date();
@@ -37,9 +57,9 @@ function legacyToConditionTree(task:Task):TaskConditionGroup{const rules=task.ac
 function ConditionBuilder({node,onChange,onRemove,depth=0}:{node:TaskConditionNode;onChange:(node:TaskConditionNode)=>void;onRemove?:()=>void;depth?:number}){
  if(node.type!=="group"){
   const leaf=node as TaskCondition;
-  const sourceChanged=(source:TaskCondition["source"])=>{const nextField:ConditionField=source==="changed"?"changed":source==="time"?"time":source==="day"?"day":(leaf.field||"result");onChange({...leaf,source,field:nextField})};
+  const sourceChanged=(source:TaskCondition["source"])=>{const nextField:ConditionField=source==="changed"?"changed":source==="newItems"?"result":source==="removedItems"?"result":source==="time"?"time":source==="day"?"day":(leaf.field||"result");onChange({...leaf,source,field:nextField})};
   return <div className="ruleBox" style={{marginLeft:Math.min(depth,5)*10}}>
-   <div className="threeCols"><select value={leaf.source} onChange={e=>sourceChanged(e.target.value as TaskCondition["source"])}><option value="result">Current result</option><option value="previousResult">Previous result</option><option value="changed">Changed state</option><option value="time">Current time</option><option value="day">Day of week</option></select>
+   <div className="threeCols"><select value={leaf.source} onChange={e=>sourceChanged(e.target.value as TaskCondition["source"])}><option value="result">Current result</option><option value="previousResult">Previous result</option><option value="changed">Changed state</option><option value="newItems">New items</option><option value="removedItems">Removed items</option><option value="time">Current time</option><option value="day">Day of week</option></select>
    <select value={leaf.field||"result"} disabled={leaf.source==="changed"||leaf.source==="time"||leaf.source==="day"} onChange={e=>onChange({...leaf,field:e.target.value as ConditionField})}>{conditionFieldOptions.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>
    <select value={leaf.operator} onChange={e=>onChange({...leaf,operator:e.target.value as TaskCondition["operator"]})}><option value="contains">contains</option><option value="not_contains">does not contain</option><option value="equals">equals</option><option value="not_equals">does not equal</option><option value="starts_with">starts with</option><option value="ends_with">ends with</option><option value="greater_than">greater than</option><option value="less_than">less than</option><option value="greater_or_equal">greater/equal</option><option value="less_or_equal">less/equal</option></select></div>
    <div className="thenActionRow" style={{marginTop:8}}><input value={leaf.value||""} onChange={e=>onChange({...leaf,value:e.target.value})} placeholder={leaf.field==="weather"?"e.g. Rain":leaf.field==="day"?"e.g. Sunday":leaf.field==="time"?"e.g. 07:00":"value, e.g. 30"}/>{onRemove&&<button type="button" className="dangerBtn" onClick={onRemove}>Remove</button>}</div>
@@ -195,20 +215,22 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
   const started=new Date().toISOString();
   try{
    const result=mode==="direct"?await executeDirectTask(task):await executeTaskWithAI(task,ai);
-   const finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result};
+   const finished=new Date().toISOString(),change=detectMeaningfulChange(task.lastResult||"",result,finished),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result,change};
    const normalize=(value:string)=>value.toLowerCase().replace(/\s+/g," ").trim();
    const previous=task.lastResult||"";
-   const changed=normalize(previous)!==normalize(result);
+   const changed=change.changed;
    const scope=(task.action?.scope||"").toLowerCase();
    const trackedUpdate=["new episode","new season","release date","only when changed"].includes(scope);
    const nowForCondition=new Date(finished);
    const conditionValues={result,previousResult:previous,changed,time:nowForCondition.toTimeString().slice(0,5),day:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][nowForCondition.getDay()]};
+   const change=detectMeaningfulChange(previous,result,finished);
+   const conditionValuesWithChange={...conditionValues,newItems:change.newItems.join("\n"),removedItems:change.removedItems.join("\n")};
    const rules=task.action?.conditionRules?.length?task.action.conditionRules:(task.action?.conditionRule?[task.action.conditionRule]:[]);
-   const conditionMatched=task.action?.conditionTree?evaluateConditionTree(task.action.conditionTree,conditionValues):rules.length?(task.action?.conditionJoin==="any"?rules.some(rule=>evaluateCondition(rule,conditionValues)):rules.every(rule=>evaluateCondition(rule,conditionValues))):(!task.action?.condition||normalize(result).includes(normalize(task.action.condition)));
+   const conditionMatched=task.action?.conditionTree?evaluateConditionTree(task.action.conditionTree,conditionValuesWithChange):rules.length?(task.action?.conditionJoin==="any"?rules.some(rule=>evaluateCondition(rule,conditionValuesWithChange)):rules.every(rule=>evaluateCondition(rule,conditionValues))):(!task.action?.condition||normalize(result).includes(normalize(task.action.condition)));
    const conditionThen=task.action?.conditionThen||"notify";
    const conditionWaitMinutes=Math.max(1,task.action?.waitMinutes||5);
    const conditionOk=conditionMatched&&(conditionThen==="notify"||conditionThen==="notify_and_stop"||conditionThen==="sound"||conditionThen==="create_task"||conditionThen==="wait");
-   const stopHit=(conditionMatched&&(conditionThen==="stop"||conditionThen==="notify_and_stop"))||(task.action?.stopConditionRule?evaluateCondition(task.action.stopConditionRule,conditionValues):Boolean(task.action?.stopCondition&&normalize(result).includes(normalize(task.action.stopCondition))));
+   const stopHit=(conditionMatched&&(conditionThen==="stop"||conditionThen==="notify_and_stop"))||(task.action?.stopConditionRule?evaluateCondition(task.action.stopConditionRule,conditionValuesWithChange):Boolean(task.action?.stopCondition&&normalize(result).includes(normalize(task.action.stopCondition))));
    const terminalAfterExecution=task.frequency==="once" || stopHit || Boolean(task.schedule?.maxRuns && task.runCount+1>=task.schedule.maxRuns) || Boolean(task.schedule?.endDate && new Date(finished).toISOString().slice(0,10)>task.schedule.endDate);
    const requiresAcknowledgement=task.notificationMode==="see"||task.notificationMode==="completed";
    const completed=terminalAfterExecution&&!requiresAcknowledgement;
@@ -216,7 +238,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    const recurringNext=manual&&task.frequency!=="once"?(()=>{let candidate=new Date(task.nextRun),guard=0;while(candidate.getTime()<=Date.now()&&guard++<1000)candidate=new Date(nextRun(candidate,task.frequency,task.schedule));return candidate.toISOString();})():nextRun(new Date(),task.frequency,task.schedule);
    const sequenceValue=task.sequence?.enabled?task.sequence.current:undefined;
    const acknowledgement:TaskAcknowledgement|undefined=requiresAcknowledgement?{id:uid(),executionId:record.id,mode:task.notificationMode==="completed"?"completed":"see",status:"pending",createdAt:finished,remindEveryMinutes:task.notificationMode==="completed"?Math.max(1,task.remindIfNotCompletedMinutes||5):undefined,nextReminderAt:task.notificationMode==="completed"?new Date(Date.now()+Math.max(1,task.remindIfNotCompletedMinutes||5)*60000).toISOString():undefined,sequenceValue,terminalAfterAcknowledgement:terminalAfterExecution}:undefined;
-   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!executionEnded,status:executionEnded?"completed":"active",nextRun:executionEnded?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement}:t));
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastChange:change,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!executionEnded,status:executionEnded?"completed":"active",nextRun:executionEnded?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement}:t));
    if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+result.slice(0,300));
    // A plain direct task must still notify when acknowledgement mode is disabled.
    // IF/THEN chains own their notifications, so avoid duplicate alerts there.
