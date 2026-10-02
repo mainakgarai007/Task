@@ -41,8 +41,9 @@ function App(){
  const [modelSearch,setModelSearch]=useState("");
  const [models,setModels]=useState<AIModel[]>([]);
  const [modelsBusy,setModelsBusy]=useState(false);
- const [running,setRunning]=useState<string|null>(null);
  const executionLocks=useRef<Set<string>>(new Set());
+ const tasksRef=useRef<Task[]>(tasks);
+ const executeTaskRef=useRef<(id:string,manual?:boolean)=>void>(()=>{});
  const [manualTitle,setManualTitle]=useState("");
  const [manualDate,setManualDate]=useState(new Date().toISOString().slice(0,10));
  const [manualTime,setManualTime]=useState("19:00");
@@ -78,12 +79,14 @@ function App(){
  const [manualStopCondition,setManualStopCondition]=useState("");
  const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
 
- useEffect(()=>saveTasks(tasks),[tasks]);
+ useEffect(()=>{tasksRef.current=tasks;},[tasks]);
+ useEffect(()=>{saveTasks(tasks);},[tasks]);
+ useEffect(()=>{if(!aiReady)return;setTasks(ts=>ts.map(t=>t.executionState==="waiting"&&t.waitingReason==="AI settings are required"?{...t,executionState:"idle",waitingReason:undefined}:t));},[aiReady]);
  useEffect(()=>{if(manualType!=="weather"){setWeatherPlaces([]);return;}const q=weatherSearch.trim();if(!q){setWeatherPlaces([]);return;}const timer=setTimeout(async()=>{setWeatherBusy(true);try{const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=100&language=en&format=json&countryCode=IN");if(!r.ok)throw new Error();const d=await r.json();setWeatherPlaces((d?.results||[]).filter((p:any)=>p.country_code==="IN").map((p:any)=>({name:p.name,state:p.admin1,country:p.country,latitude:p.latitude,longitude:p.longitude})));}catch{setWeatherPlaces([]);}finally{setWeatherBusy(false);}},280);return()=>clearTimeout(timer);},[weatherSearch,manualType]);
  useEffect(()=>{if(manualType!=="anime"){setAnimeSearchResults([]);return;}const q=manualTopic.trim();if(!q){setAnimeSearchResults([]);return;}const timer=setTimeout(async()=>{setAnimeSearchBusy(true);try{setAnimeSearchResults(await searchAnime(q));}catch{setAnimeSearchResults([]);}finally{setAnimeSearchBusy(false);}},350);return()=>clearTimeout(timer);},[manualTopic,manualType]);
 
 
- async function executeTask(id:string){
+ async function executeTask(id:string,manual=false){
   if(executionLocks.current.has(id))return;
   const task=tasks.find(x=>x.id===id);if(!task||!task.enabled||task.status==="completed"||task.executionState==="running")return;
   executionLocks.current.add(id);
@@ -93,7 +96,7 @@ function App(){
    setTasks(ts=>ts.map(t=>t.id===id?{...t,executionState:"waiting",waitingReason:"AI settings are required"}:t));
    setError("AI settings are required for this AI task.");setDraftAi(ai);setSettingsOpen(true);return;
   }
-  setRunning(id);setTasks(ts=>ts.map(t=>t.id===id?{...t,executionState:"running",waitingReason:undefined}:t));
+  setTasks(ts=>ts.map(t=>t.id===id?{...t,executionState:"running",waitingReason:undefined}:t));
   const started=new Date().toISOString();
   try{
    const result=mode==="direct"?await executeDirectTask(task):await executeTaskWithAI(task,ai);
@@ -106,19 +109,32 @@ function App(){
    const conditionOk=!task.action?.condition||normalize(result).includes(normalize(task.action.condition));
    const stopHit=Boolean(task.action?.stopCondition&&normalize(result).includes(normalize(task.action.stopCondition)));
    const completed=task.frequency==="once" || stopHit || Boolean(task.schedule?.maxRuns && task.runCount+1>=task.schedule.maxRuns) || Boolean(task.schedule?.endDate && new Date(finished).toISOString().slice(0,10)>task.schedule.endDate);
-   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
+   const recurringNext=manual&&task.frequency!=="once"?(()=>{let candidate=new Date(task.nextRun),guard=0;while(candidate.getTime()<=Date.now()&&guard++<1000)candidate=new Date(nextRun(candidate,task.frequency,task.schedule));return candidate.toISOString();})():nextRun(new Date(),task.frequency,task.schedule);
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:recurringNext}:t));
    if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))) await notify("Task completed",task.title+"\n"+result.slice(0,300));
   }catch(e){
    const message=e instanceof Error?e.message:"Task execution failed.",finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"failed",error:message};
-   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,executionState:"idle",waitingReason:undefined,status:t.frequency==="once"?"failed":"active",nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,executionState:"idle",waitingReason:undefined,enabled:t.frequency==="once"?false:t.enabled,status:t.frequency==="once"?"failed":"active",nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
    await notify("Task failed",task.title);
-  }finally{executionLocks.current.delete(id);setRunning(null);}
+  }finally{executionLocks.current.delete(id);}
  }
+ executeTaskRef.current=executeTask;
 
  useEffect(()=>{
-  const timer=setInterval(()=>{const now=Date.now();tasks.filter(t=>{if(!t.enabled||t.status!=="active"||new Date(t.nextRun).getTime()>now)return false;if(t.schedule?.endDate&&new Date(t.schedule.endDate+"T23:59:59").getTime()<now){setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:false,status:"completed"}:x));return false;}return true;}).forEach(t=>executeTask(t.id));},15000);
+  const timer=setInterval(()=>{
+   const now=Date.now();
+   tasksRef.current.filter(t=>{
+    if(t.executionState==="waiting"&&t.waitingReason==="AI settings are required")return false;
+    if(!t.enabled||t.status!=="active"||new Date(t.nextRun).getTime()>now)return false;
+    if(t.schedule?.endDate&&new Date(t.schedule.endDate+"T23:59:59").getTime()<now){
+     setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:false,status:"completed",executionState:"idle"}:x));
+     return false;
+    }
+    return true;
+   }).forEach(t=>executeTaskRef.current(t.id,false));
+  },15000);
   return()=>clearInterval(timer);
- },[tasks,ai,aiReady,running]);
+ },[]);
 
  const visible=useMemo(()=>tasks.filter(t=>filter==="all"||(filter==="active"&&t.enabled)||(filter==="paused"&&!t.enabled)),[tasks,filter]);
 
@@ -223,7 +239,7 @@ function App(){
    <main>{visible.map(t=><article className="card" key={t.id}>
     <div className="cardTop"><span className={"dot "+(t.executionState==="running"?"live":t.enabled?"live":"paused")}></span><span>{t.executionState==="running"?"RUNNING":t.executionState==="waiting"?"WAITING":t.enabled?"ACTIVE":t.status.toUpperCase()}</span><span className="modeBadge">{t.executionMode==="direct"?"DIRECT":"AI"}</span><button className="more editBtn" onClick={()=>openEdit(t)}>Edit</button><button className="more deleteBtn" onClick={()=>setDeleteTarget(t)}>Delete</button></div>
     <h2>{t.title}</h2><p>{t.prompt}</p><div className="meta"><span>{frequencyLabels[t.frequency]}</span><span>Next · {new Date(t.nextRun).toLocaleString()}</span><span>Runs · {t.runCount}</span>{t.executionState==="waiting"&&<span>Waiting · {t.waitingReason||"Waiting"}</span>}</div>{t.lastError&&<div className="error">{t.lastError}</div>}{t.lastResult&&<div className="resultPreview"><strong>Latest result</strong><p>{t.lastResult}</p></div>}
-    <div className="actions"><button onClick={()=>setHistoryTarget(t)}>History</button><button onClick={()=>setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:!x.enabled,status:x.enabled?"paused":"active"}:x))}>{t.enabled?"Pause":"Resume"}</button><button disabled={running===t.id||t.executionState==="waiting"} onClick={()=>executeTask(t.id)}>{running===t.id?"Running…":t.executionState==="waiting"?"Waiting…":"Run now"}</button></div>
+    <div className="actions"><button onClick={()=>setHistoryTarget(t)}>History</button><button disabled={t.status==="failed"||t.status==="completed"} onClick={()=>setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:!x.enabled,status:x.enabled?"paused":"active",executionState:"idle"}:x))}>{t.status==="failed"?"Failed":t.status==="completed"?"Completed":t.enabled?"Pause":"Resume"}</button><button disabled={t.status==="failed"||t.status==="completed"||t.executionState==="running"||t.executionState==="waiting"} onClick={()=>executeTask(t.id,true)}>{t.executionState==="running"?"Running…":t.executionState==="waiting"?"Waiting…":t.status==="failed"?"Failed":"Run now"}</button></div>
    </article>)}</main>}
 
   <section className="starter"><h3>Quick create</h3><div className="backupBar"><button onClick={()=>{const blob=new Blob([JSON.stringify(tasks,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-backup.json";a.click();URL.revokeObjectURL(a.href)}}>Export backup</button><button onClick={()=>{const input=document.createElement("input");input.type="file";input.accept="application/json";input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data))throw new Error("Invalid backup file.");const valid=normalizeTasks(data);setTasks(valid);setError(valid.length===data.length?"Backup restored.":`Restored ${valid.length} valid tasks.`);}catch(e){setError(e instanceof Error?e.message:"Could not restore backup.");}};input.click()}}>Import backup</button></div><div className="starterGrid"><button onClick={()=>openCreator("manual")}>🛠️<b>Manual task</b><small>Choose time + action yourself</small></button><button onClick={()=>{openCreator("ai");setRequest("Every morning at 7 AM, give me today's weather details for my city.")}}>✨<b>AI task</b><small>Describe what you want</small></button></div></section>
