@@ -11,13 +11,16 @@ export type ThenActionType="notify"|"reminder"|"wait"|"sound"|"open_link"|"creat
 export interface TaskThenAction{type:ThenActionType;seconds?:number;minutes?:number;message?:string;url?:string;taskId?:string;}
 export type ConditionSource="result"|"previousResult"|"changed"|"time"|"day";
 export type ConditionOperator="contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal";
-export interface TaskCondition{source:ConditionSource;operator:ConditionOperator;value?:string}
+export type ConditionField="result"|"weather"|"temperature"|"feels_like"|"rain_probability"|"cloud_cover"|"humidity"|"wind"|"uv"|"visibility"|"time"|"day"|"changed";
+export interface TaskCondition{type?:"condition";source:ConditionSource;operator:ConditionOperator;value?:string;field?:ConditionField}
+export interface TaskConditionGroup{type:"group";join:"all"|"any";negated?:boolean;children:TaskConditionNode[]}
+export type TaskConditionNode=TaskCondition|TaskConditionGroup;
 
 export interface TaskSchedule{
  time:string;startDate?:string;endDate?:string;weekday?:number;weekdays?:number[];months?:number[];monthDay?:number;monthDays?:number[];intervalMinutes?:number;maxRuns?:number;notifyOnChange?:boolean;
 }
 export interface TaskAction{
- type:ActionType;message?:string;location?:string;locationMode?:"manual"|"auto-once"|"auto-live";latitude?:number;longitude?:number;topic?:string;animeId?:number;animeSource?:"anilist"|"jikan";language?:string;url?:string;scope?:string;region?:string;condition?:string;stopCondition?:string;conditionRule?:TaskCondition;conditionRules?:TaskCondition[];conditionJoin?:"all"|"any";conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task"|"wait";waitMinutes?:number;thenActions?:TaskThenAction[];stopConditionRule?:TaskCondition;notifyOnChange?:boolean;category?:string;
+ type:ActionType;message?:string;location?:string;locationMode?:"manual"|"auto-once"|"auto-live";latitude?:number;longitude?:number;topic?:string;animeId?:number;animeSource?:"anilist"|"jikan";language?:string;url?:string;scope?:string;region?:string;condition?:string;stopCondition?:string;conditionRule?:TaskCondition;conditionRules?:TaskCondition[];conditionJoin?:"all"|"any";conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task"|"wait";waitMinutes?:number;thenActions?:TaskThenAction[];stopConditionRule?:TaskCondition;conditionTree?:TaskConditionGroup;stopConditionTree?:TaskConditionGroup;notifyOnChange?:boolean;category?:string;
 }
 export interface ExecutionRecord{id:string;startedAt:string;finishedAt:string;status:"success"|"failed";result?:string;error?:string;}
 export interface Task{
