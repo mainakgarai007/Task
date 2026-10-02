@@ -99,6 +99,12 @@ function App(){
  const [manualSecondOperator,setManualSecondOperator]=useState<"contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal">("equals");
  const [manualSecondValue,setManualSecondValue]=useState("");
  const [manualThen,setManualThen]=useState<"notify"|"stop"|"notify_and_stop"|"sound"|"create_task">("notify");
+ const [manualNotificationMode,setManualNotificationMode]=useState<NotificationMode>("disable");
+ const [manualRemindMinutes,setManualRemindMinutes]=useState("5");
+ const [manualSequenceEnabled,setManualSequenceEnabled]=useState(false);
+ const [manualSequenceCurrent,setManualSequenceCurrent]=useState("1");
+ const [manualSequenceEnd,setManualSequenceEnd]=useState("1");
+ const [manualSequenceStep,setManualSequenceStep]=useState("1");
  const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
 
  useEffect(()=>{tasksRef.current=tasks;},[tasks]);
@@ -191,6 +197,12 @@ function App(){
   setManualSecondOperator(task.action?.conditionRules?.[1]?.operator||"equals");
   setManualSecondValue(task.action?.conditionRules?.[1]?.value||"");
   setManualThen(task.action?.conditionThen|| (task.action?.stopConditionRule?"stop":"notify"));
+  setManualNotificationMode(task.notificationMode||"disable");
+  setManualRemindMinutes(String(task.remindIfNotCompletedMinutes||5));
+  setManualSequenceEnabled(Boolean(task.sequence?.enabled));
+  setManualSequenceCurrent(String(task.sequence?.current||1));
+  setManualSequenceEnd(String(task.sequence?.end||1));
+  setManualSequenceStep(String(task.sequence?.step||1));
   const type=task.action?.type;
   setManualType(type==="anime"||type==="movie"||type==="weather"||type==="news"||type==="web"?(type as "weather"|"news"|"anime"|"movie"|"web"):"reminder");
   setManualMessage(task.action?.message||"");
@@ -236,7 +248,7 @@ function App(){
   setCreatorMode(mode);setCreator(true);setError("");
  }
  function resetManual(){
-  setManualTitle("");setManualDate(localDateISO(new Date()));setManualTime("19:00");setManualFrequency("daily");setManualWeekday("1");setManualWeekdays([1]);setManualType("reminder");setManualMessage("");setManualLocation("");setWeatherSearch("");setWeatherPlaces([]);setManualWeatherCoords(null);setManualWeatherLocationMode("manual");setManualTopic("");setAnimeSearchResults([]);setSelectedAnimeId(undefined);setSelectedAnimeSource(undefined);setManualTopicPreset("Custom");setManualUrl("");setManualScope("all updates");setManualCategory("AI & tech");setManualRegion("India");setManualInterval("120");setManualEndDate("");setManualMaxRuns("");setManualNotifyChange(false);setManualCondition("");setManualStopCondition("");setManualConditionSource("result");setManualConditionOperator("contains");setManualConditionValue("");setManualStopSource("result");setManualStopOperator("contains");setManualStopValue("");setManualIfEnabled(false);setManualSecondIfEnabled(false);setManualSecondSource("day");setManualSecondOperator("equals");setManualSecondValue("");setManualThen("notify");
+  setManualTitle("");setManualDate(localDateISO(new Date()));setManualTime("19:00");setManualFrequency("daily");setManualWeekday("1");setManualWeekdays([1]);setManualType("reminder");setManualMessage("");setManualLocation("");setWeatherSearch("");setWeatherPlaces([]);setManualWeatherCoords(null);setManualWeatherLocationMode("manual");setManualTopic("");setAnimeSearchResults([]);setSelectedAnimeId(undefined);setSelectedAnimeSource(undefined);setManualTopicPreset("Custom");setManualUrl("");setManualScope("all updates");setManualCategory("AI & tech");setManualRegion("India");setManualInterval("120");setManualEndDate("");setManualMaxRuns("");setManualNotifyChange(false);setManualCondition("");setManualStopCondition("");setManualConditionSource("result");setManualConditionOperator("contains");setManualConditionValue("");setManualStopSource("result");setManualStopOperator("contains");setManualStopValue("");setManualIfEnabled(false);setManualSecondIfEnabled(false);setManualSecondSource("day");setManualSecondOperator("equals");setManualSecondValue("");setManualThen("notify");setManualNotificationMode("disable");setManualRemindMinutes("5");setManualSequenceEnabled(false);setManualSequenceCurrent("1");setManualSequenceEnd("1");setManualSequenceStep("1");
  }
  function makeManualTask(){
   setError("");
