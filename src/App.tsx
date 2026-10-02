@@ -83,14 +83,14 @@ function App(){
  const [manualNotifyChange,setManualNotifyChange]=useState(false);
  const [manualCondition,setManualCondition]=useState("");
  const [manualStopCondition,setManualStopCondition]=useState("");
- const [manualConditionSource,setManualConditionSource]=useState<"result"|"previousResult"|"changed">("result");
+ const [manualConditionSource,setManualConditionSource]=useState<"result"|"previousResult"|"changed"|"time"|"day">("result");
  const [manualConditionOperator,setManualConditionOperator]=useState<"contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal">("contains");
  const [manualConditionValue,setManualConditionValue]=useState("");
  const [manualStopSource,setManualStopSource]=useState<"result"|"previousResult"|"changed">("result");
  const [manualStopOperator,setManualStopOperator]=useState<"contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal">("contains");
  const [manualStopValue,setManualStopValue]=useState("");
  const [manualIfEnabled,setManualIfEnabled]=useState(false);
- const [manualThen,setManualThen]=useState<"notify"|"stop"|"notify_and_stop">("notify");
+ const [manualThen,setManualThen]=useState<"notify"|"stop"|"notify_and_stop"|"sound"|"create_task">("notify");
  const aiReady=Boolean(ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
 
  useEffect(()=>{tasksRef.current=tasks;},[tasks]);
