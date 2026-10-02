@@ -192,7 +192,7 @@ function App(){
    const completed=terminalAfterExecution&&!requiresAcknowledgement;
    const recurringNext=manual&&task.frequency!=="once"?(()=>{let candidate=new Date(task.nextRun),guard=0;while(candidate.getTime()<=Date.now()&&guard++<1000)candidate=new Date(nextRun(candidate,task.frequency,task.schedule));return candidate.toISOString();})():nextRun(new Date(),task.frequency,task.schedule);
    const sequenceValue=task.sequence?.enabled?task.sequence.current:undefined;
-   const acknowledgement:TaskAcknowledgement|undefined=requiresAcknowledgement?{id:uid(),executionId:record.id,mode:task.notificationMode==="completed"?"completed":"see",status:"pending",createdAt:finished,remindEveryMinutes:task.notificationMode==="completed"?Math.max(1,task.remindIfNotCompletedMinutes||5):undefined,nextReminderAt:task.notificationMode==="completed"?new Date(Date.now()+Math.max(1,task.remindIfNotCompletedMinutes||5)*60000).toISOString():undefined,sequenceValue}:undefined;
+   const acknowledgement:TaskAcknowledgement|undefined=requiresAcknowledgement?{id:uid(),executionId:record.id,mode:task.notificationMode==="completed"?"completed":"see",status:"pending",createdAt:finished,remindEveryMinutes:task.notificationMode==="completed"?Math.max(1,task.remindIfNotCompletedMinutes||5):undefined,nextReminderAt:task.notificationMode==="completed"?new Date(Date.now()+Math.max(1,task.remindIfNotCompletedMinutes||5)*60000).toISOString():undefined,sequenceValue,terminalAfterAcknowledgement:terminalAfterExecution}:undefined;
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!completed,status:completed?"completed":"active",nextRun:completed?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement}:t));
    if(acknowledgement){
     const label=sequenceValue!=null?"Step "+sequenceValue+" · ":"";
@@ -221,7 +221,7 @@ function App(){
    const now=Date.now();
    tasksRef.current.filter(t=>{
     if(t.executionState==="waiting"&&t.waitingReason==="AI settings are required")return false;
-    if(!t.enabled||t.status!=="active"||new Date(t.nextRun).getTime()>now)return false;
+    if(!t.enabled||t.status!=="active"||t.pendingAcknowledgement?.status==="pending"||new Date(t.nextRun).getTime()>now)return false;
     if(t.schedule?.endDate&&new Date(t.schedule.endDate+"T23:59:59").getTime()<now){
      setTasks(ts=>ts.map(x=>x.id===t.id?{...x,enabled:false,status:"completed",executionState:"idle"}:x));
      return false;
