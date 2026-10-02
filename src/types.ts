@@ -3,7 +3,7 @@ export type TaskStatus="active"|"paused"|"completed"|"failed";
 export type ExecutionState="idle"|"running"|"waiting";
 export type ExecutionMode="direct"|"ai";
 export type ActionType="reminder"|"weather"|"news"|"anime"|"movie"|"web"|"ai";
-export type ConditionSource="result"|"previousResult"|"changed";
+export type ConditionSource="result"|"previousResult"|"changed"|"time"|"day";
 export type ConditionOperator="contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal";
 export interface TaskCondition{source:ConditionSource;operator:ConditionOperator;value?:string}
 
@@ -12,6 +12,7 @@ export interface TaskSchedule{
  startDate?:string;
  endDate?:string;
  weekday?:number;
+ weekdays?:number[];
  monthDay?:number;
  intervalMinutes?:number;
  maxRuns?:number;
@@ -35,7 +36,7 @@ export interface TaskAction{
  condition?:string;
  stopCondition?:string;
  conditionRule?:TaskCondition;
- conditionThen?:"notify"|"stop"|"notify_and_stop";
+ conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task";
  stopConditionRule?:TaskCondition;
  notifyOnChange?:boolean;
  category?:string;
