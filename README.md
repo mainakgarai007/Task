@@ -31,7 +31,7 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Custom minute intervals
 - Start date
 - End date
-- Weekly day
+- Weekly day or multiple selected weekdays (for example Sunday + Friday)
 - Monthly day
 - Maximum run count
 - Automatic stop when a stop condition is reached
@@ -40,7 +40,9 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Tasks waiting for required AI configuration are not retried by the scheduler until the requirement is available; they return to idle automatically after AI settings are configured
 
 ### Smart automation
-- Structured IF/THEN condition rules using current result, previous result, or change state
+- Universal IF/THEN condition rules using current result, previous result, change state, current time, or day of week
+- Multiple IF conditions with AND logic
+- THEN actions: notify, stop, notify + stop, play a sound, or create an AI follow-up task
 - Text operators: contains, not contains, equals, not equals, starts with, ends with
 - Numeric operators: greater than, less than, greater/equal, less/equal
 - Direct execution for supported public-data tasks
@@ -148,7 +150,7 @@ A normal GitHub Pages/browser deployment cannot guarantee execution while the br
 
 Native Android background scheduling is planned for the Capacitor version.
 
-Event connectors such as Gmail, GitHub webhooks and Slack, advanced IF/THEN chains, file processing and richer monitoring are planned.
+Event connectors such as Gmail, GitHub webhooks and Slack, multi-step action chains, file processing and richer monitoring are planned. Browser pages cannot directly read another app’s notifications; Android Notification Listener support is planned for notification-triggered tasks.
 
 ## Tech stack
 
