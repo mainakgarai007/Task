@@ -271,13 +271,15 @@ function App(){
   action={...action,conditionRule:ifRule,conditionRules:conditionRules.length?conditionRules:undefined,conditionJoin:conditionRules.length>1?"all":undefined,conditionThen:ifThen,notifyOnChange:manualNotifyChange};
   const schedule:TaskSchedule={time:manualTime,startDate:manualDate,endDate:manualEndDate||undefined,weekday:manualFrequency==="weekly"?Number(manualWeekdays[0]??manualWeekday):undefined,weekdays:manualFrequency==="weekly"?manualWeekdays:undefined,monthDay:manualFrequency==="monthly"?Number(manualMonthDay):undefined,intervalMinutes:manualFrequency==="custom"?Number(manualInterval):undefined,maxRuns:manualMaxRuns?Number(manualMaxRuns):undefined,notifyOnChange:manualNotifyChange};
   const firstRun=buildFirstRun(manualDate,manualTime,manualFrequency,manualWeekday,manualMonthDay,Number(manualInterval),manualWeekdays);
+  const sequence=manualSequenceEnabled?{enabled:true,current:Math.max(1,Number(manualSequenceCurrent)||1),end:Math.max(1,Number(manualSequenceEnd)||1),step:Math.max(1,Number(manualSequenceStep)||1)}:undefined;
+  const ackConfig={notificationMode:manualNotificationMode,remindIfNotCompletedMinutes:manualNotificationMode==="completed"?Math.max(1,Number(manualRemindMinutes)||5):undefined,sequence};
   const existing=editingId?tasks.find(t=>t.id===editingId):undefined;
   if(existing){
-   const updated:Task={...existing,title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",executionState:"idle",waitingReason:undefined,action,schedule,lastError:undefined};
+   const updated:Task={...existing,...ackConfig,title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",executionState:"idle",waitingReason:undefined,action,schedule,lastError:undefined,pendingAcknowledgement:undefined};
    setTasks(prev=>prev.map(t=>t.id===existing.id?updated:t));
    notify("Task updated",updated.title);
   }else{
-   const task:Task={id:uid(),title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",executionState:"idle",createdAt:new Date().toISOString(),runCount:0,history:[],executionMode:"direct",action,schedule};
+   const task:Task={id:uid(),title:manualTitle.trim(),prompt,frequency:manualFrequency,nextRun:firstRun,enabled:true,status:"active",executionState:"idle",createdAt:new Date().toISOString(),runCount:0,history:[],executionMode:"direct",action,schedule,...ackConfig};
    setTasks(prev=>[task,...prev]);
    notify("Task created",task.title);
   }
