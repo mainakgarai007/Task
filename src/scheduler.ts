@@ -50,7 +50,7 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
  return d.toISOString();
 }
 
-export async function notify(title:string,body:string,options?:{taskId?:string;ackId?:string;actions?:{action:string;title:string}[]}){
+export async function notify(title:string,body:string,options?:any){
  try{
   if("serviceWorker" in navigator){
    const reg=await navigator.serviceWorker.getRegistration();
