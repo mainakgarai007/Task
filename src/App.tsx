@@ -184,7 +184,7 @@ function App(){
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!executionEnded,status:executionEnded?"completed":"active",nextRun:executionEnded?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement}:t));
    if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+result.slice(0,300));
    if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))){
-    const chain=task.action?.thenActions?.length?task.action.thenActions:[{type:conditionThen==="notify_and_stop"?"notify":conditionThen} as TaskThenAction];
+    const chain=task.action?.thenActions?.length?task.action.thenActions:(conditionThen==="notify_and_stop"?[{type:"notify"},{type:"stop"}]:conditionThen==="wait"?[{type:"wait",minutes:conditionWaitMinutes}]:[{type:conditionThen} as TaskThenAction]);
     for(const step of chain){
      if(step.type==="notify"||step.type==="reminder") await notify(step.type==="reminder"?"Reminder":"Task completed",step.message?.trim()||task.title+"\n"+result.slice(0,300));
      else if(step.type==="sound"){
@@ -202,6 +202,7 @@ function App(){
       if(step.taskId&&step.taskId!==id) await executeTaskRef.current(step.taskId,true);
      } else if(step.type==="stop"||step.type==="complete"){
       setTasks(ts=>ts.map(x=>x.id===id?{...x,enabled:false,status:"completed"}:x));
+      break;
      }
     }
    }
