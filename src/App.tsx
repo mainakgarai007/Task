@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from "react";
-import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule} from "./types";
+import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule,NotificationMode,TaskAcknowledgement} from "./types";
 import {loadTasks,saveTasks,uid,normalizeTasks} from "./storage";
 import {nextRun,notify} from "./scheduler";
 import {evaluateCondition} from "./conditions";
