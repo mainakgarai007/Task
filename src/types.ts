@@ -12,7 +12,7 @@ export type ConditionOperator="contains"|"not_contains"|"equals"|"not_equals"|"s
 export interface TaskCondition{source:ConditionSource;operator:ConditionOperator;value?:string}
 
 export interface TaskSchedule{
- time:string;startDate?:string;endDate?:string;weekday?:number;weekdays?:number[];monthDay?:number;intervalMinutes?:number;maxRuns?:number;notifyOnChange?:boolean;
+ time:string;startDate?:string;endDate?:string;weekday?:number;weekdays?:number[];months?:number[];monthDay?:number;monthDays?:number[];intervalMinutes?:number;maxRuns?:number;notifyOnChange?:boolean;
 }
 export interface TaskAction{
  type:ActionType;message?:string;location?:string;locationMode?:"manual"|"auto-once"|"auto-live";latitude?:number;longitude?:number;topic?:string;animeId?:number;animeSource?:"anilist"|"jikan";language?:string;url?:string;scope?:string;region?:string;condition?:string;stopCondition?:string;conditionRule?:TaskCondition;conditionRules?:TaskCondition[];conditionJoin?:"all"|"any";conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task";stopConditionRule?:TaskCondition;notifyOnChange?:boolean;category?:string;
