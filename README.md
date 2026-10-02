@@ -40,6 +40,9 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Tasks waiting for required AI configuration are not retried by the scheduler until the requirement is available; they return to idle automatically after AI settings are configured
 
 ### Smart automation
+- Structured IF/THEN condition rules using current result, previous result, or change state
+- Text operators: contains, not contains, equals, not equals, starts with, ends with
+- Numeric operators: greater than, less than, greater/equal, less/equal
 - Direct execution for supported public-data tasks
 - AI execution when reasoning/generation is actually required
 - Result comparison
