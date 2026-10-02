@@ -22,9 +22,9 @@ function fieldValue(rule:TaskCondition,source:string){
 
 export function evaluateCondition(
  rule:TaskCondition,
- values:{result:string;previousResult:string;changed:boolean;time?:string;day?:string}
+ values:{result:string;previousResult:string;changed:boolean;newItems?:string;removedItems?:string;time?:string;day?:string}
 ):boolean{
- const source=rule.source==="previousResult"?values.previousResult:rule.source==="changed"?String(values.changed):rule.source==="time"?String(values.time||""):rule.source==="day"?String(values.day||""):values.result;
+ const source=rule.source==="previousResult"?values.previousResult:rule.source==="changed"?String(values.changed):rule.source==="newItems"?String(values.newItems||""):rule.source==="removedItems"?String(values.removedItems||""):rule.source==="time"?String(values.time||""):rule.source==="day"?String(values.day||""):values.result;
  if(rule.source==="changed"){
   const expected=normalize(rule.value||"true");
   const actual=values.changed?"true":"false";
