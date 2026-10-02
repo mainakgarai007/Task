@@ -54,7 +54,7 @@ export async function notify(title:string,body:string,options?:{taskId?:string;a
  try{
   if("serviceWorker" in navigator){
    const reg=await navigator.serviceWorker.getRegistration();
-   if(reg?.showNotification){await reg.showNotification(title,{body,actions:options?.actions||[],data:{taskId:options?.taskId,ackId:options?.ackId}});return;}
+   if(reg?.showNotification){const notificationOptions:any={body,data:{taskId:options?.taskId,ackId:options?.ackId}};if(options?.actions)notificationOptions.actions=options.actions;await reg.showNotification(title,notificationOptions);return;}
   }
   if("Notification" in window){
    if(Notification.permission==="granted")new Notification(title,{body});
