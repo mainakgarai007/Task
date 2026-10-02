@@ -114,47 +114,37 @@ function App(){
  useEffect(()=>{if(manualType!=="anime"){setAnimeSearchResults([]);return;}const q=manualTopic.trim();if(!q){setAnimeSearchResults([]);return;}const timer=setTimeout(async()=>{setAnimeSearchBusy(true);try{setAnimeSearchResults(await searchAnime(q));}catch{setAnimeSearchResults([]);}finally{setAnimeSearchBusy(false);}},350);return()=>clearTimeout(timer);},[manualTopic,manualType]);
 
 
- async function acknowledgeTask(taskId:string,ackId:string,action:"seen"|"completed"){
+ async function acknowledgeTask(taskId:string,ackId:string,mode:"seen"|"completed"){
+  const task=tasksRef.current.find(t=>t.id===taskId);
+  if(!task?.pendingAcknowledgement||task.pendingAcknowledgement.id!==ackId)return;
   const now=new Date().toISOString();
-  const current=tasksRef.current.find(t=>t.id===taskId);
-  if(!current?.pendingAcknowledgement||current.pendingAcknowledgement.id!==ackId)return;
   setTasks(ts=>ts.map(t=>{
    if(t.id!==taskId||t.pendingAcknowledgement?.id!==ackId)return t;
    const pending=t.pendingAcknowledgement;
-   const acknowledged={...pending,status:action==="completed"?"completed":"seen",updatedAt:now,nextReminderAt:undefined};
-   const sequence=t.sequence;
-   let nextSequence=sequence;
+   const ack={...pending,status:mode==="completed"?"completed":"seen",updatedAt:now,nextReminderAt:undefined};
+   let sequence=t.sequence;
    let completed=t.status==="completed";
    let enabled=t.enabled;
-   if(action==="completed"){
-    if(sequence?.enabled){
+   if(mode==="completed"){
+    if(pending.terminalAfterAcknowledgement){completed=true;enabled=false;}
+    else if(sequence?.enabled){
      const next=sequence.current+sequence.step;
-     if(next>sequence.end){nextSequence={...sequence,current:sequence.end};completed=true;enabled=false;}
-     else nextSequence={...sequence,current:next};
-    }else if(t.frequency==="once"||t.action?.conditionThen==="stop"||Boolean(t.schedule?.maxRuns&&t.runCount>=t.schedule.maxRuns)){
-     completed=true;enabled=false;
-    }
+     if(next>sequence.end){completed=true;enabled=false;sequence={...sequence,current:sequence.end};}
+     else sequence={...sequence,current:next};
+    }else if(t.frequency==="once"){completed=true;enabled=false;}
    }
-   return {...t,pendingAcknowledgement:undefined,acknowledgements:[acknowledged,...(t.acknowledgements||[])].slice(0,50),sequence:nextSequence,status:completed?"completed":t.status,enabled};
+   return {...t,pendingAcknowledgement:undefined,acknowledgements:[ack,...(t.acknowledgements||[])].slice(0,50),sequence,status:completed?"completed":t.status,enabled};
   }));
  }
- useEffect(()=>{
-  const handler=(event:MessageEvent)=>{
-   const data=event.data||{};
-   if(data.type==="task-ack"&&(data.action==="see"||data.action==="completed"))acknowledgeTask(data.taskId,data.ackId,data.action);
-  };
-  navigator.serviceWorker?.addEventListener("message",handler);
-  return()=>navigator.serviceWorker?.removeEventListener("message",handler);
- },[]);
  useEffect(()=>{
   const timer=setInterval(()=>{
    const now=Date.now();
    tasksRef.current.forEach(t=>{
     const p=t.pendingAcknowledgement;
-    if(p?.status==="pending"&&p.mode==="completed"&&p.nextReminderAt&&new Date(p.nextReminderAt).getTime()<=now){
-     const minutes=Math.max(1,t.remindIfNotCompletedMinutes||5);
-     notify("Task reminder",t.title+"\nStill waiting for completion.",{taskId:t.id,ackId:p.id,actions:[{action:"completed",title:"Completed"}]});
-     setTasks(ts=>ts.map(x=>x.id===t.id&&x.pendingAcknowledgement?.id===p.id?{...x,pendingAcknowledgement:{...p,nextReminderAt:new Date(now+minutes*60000).toISOString()}}:x));
+    if(p?.mode==="completed"&&p.status==="pending"&&p.nextReminderAt&&new Date(p.nextReminderAt).getTime()<=now){
+     const mins=Math.max(1,t.remindIfNotCompletedMinutes||5);
+     notify("Task reminder",t.title+"\nStill waiting for completion.");
+     setTasks(ts=>ts.map(x=>x.id===t.id&&x.pendingAcknowledgement?.id===p.id?{...x,pendingAcknowledgement:{...p,nextReminderAt:new Date(now+mins*60000).toISOString()}}:x));
     }
    });
   },15000);
@@ -195,11 +185,7 @@ function App(){
    const sequenceValue=task.sequence?.enabled?task.sequence.current:undefined;
    const acknowledgement:TaskAcknowledgement|undefined=requiresAcknowledgement?{id:uid(),executionId:record.id,mode:task.notificationMode==="completed"?"completed":"see",status:"pending",createdAt:finished,remindEveryMinutes:task.notificationMode==="completed"?Math.max(1,task.remindIfNotCompletedMinutes||5):undefined,nextReminderAt:task.notificationMode==="completed"?new Date(Date.now()+Math.max(1,task.remindIfNotCompletedMinutes||5)*60000).toISOString():undefined,sequenceValue,terminalAfterAcknowledgement:terminalAfterExecution}:undefined;
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!executionEnded,status:executionEnded?"completed":"active",nextRun:executionEnded?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement}:t));
-   if(acknowledgement){
-    const label=sequenceValue!=null?"Step "+sequenceValue+" · ":"";
-    if(task.notificationMode==="see")await notify("Task update",task.title+"\n"+label+result.slice(0,300),{taskId:task.id,ackId:acknowledgement.id,actions:[{action:"see",title:"See it"}]});
-    else await notify("Task reminder",task.title+"\n"+label+result.slice(0,300),{taskId:task.id,ackId:acknowledgement.id,actions:[{action:"completed",title:"Completed"}]});
-   }
+   if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+result.slice(0,300));
    if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))){
     if(conditionThen==="notify"||conditionThen==="notify_and_stop") await notify("Task completed",task.title+"\n"+result.slice(0,300));
     if(conditionThen==="sound"||conditionThen==="notify_and_stop"){
@@ -389,19 +375,11 @@ function App(){
     {manualType==="news"&&<label>Category<select value={manualCategory} onChange={e=>setManualCategory(e.target.value)}><option>AI & tech</option><option>Gaming</option><option>Science & space</option><option>India & world</option><option>Entertainment</option><option>Custom</option></select></label>}
     {manualType==="web"&&<label>Public URL / RSS URL<input value={manualUrl} onChange={e=>setManualUrl(e.target.value)} placeholder="https://example.com/feed.xml"/></label>}
     <div className="sectionLabel">3 · Notification acknowledgement</div>
-    <label>Notification mode<select value={manualNotificationMode} onChange={e=>setManualNotificationMode(e.target.value as NotificationMode)}>
-      <option value="disable">🔕 Disable</option><option value="see">👀 See it</option><option value="completed">✅ Completed</option>
-    </select></label>
-    {manualNotificationMode==="completed"&&<label>Remind me if not completed<select value={manualRemindMinutes} onChange={e=>setManualRemindMinutes(e.target.value)}>
-      <option value="1">1 minute</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option>
-    </select></label>}
+    <label>Notification mode<select value={manualNotificationMode} onChange={e=>setManualNotificationMode(e.target.value as NotificationMode)}><option value="disable">🔕 Disable</option><option value="see">👀 See it</option><option value="completed">✅ Completed</option></select></label>
+    {manualNotificationMode==="completed"&&<label>Remind me if not completed<select value={manualRemindMinutes} onChange={e=>setManualRemindMinutes(e.target.value)}><option value="1">1 minute</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option></select></label>}
     <div className="sectionLabel">4 · Sequence / chain</div>
     <label className="checkRow"><input type="checkbox" checked={manualSequenceEnabled} onChange={e=>setManualSequenceEnabled(e.target.checked)}/><span>Enable universal sequence</span></label>
-    {manualSequenceEnabled&&<div className="twoCols">
-      <label>Starting number<input type="number" min="1" value={manualSequenceCurrent} onChange={e=>setManualSequenceCurrent(e.target.value)}/></label>
-      <label>End number<input type="number" min="1" value={manualSequenceEnd} onChange={e=>setManualSequenceEnd(e.target.value)}/></label>
-      <label>Step<input type="number" min="1" value={manualSequenceStep} onChange={e=>setManualSequenceStep(e.target.value)}/></label>
-    </div>}
+    {manualSequenceEnabled&&<div className="twoCols"><label>Starting number<input type="number" min="1" value={manualSequenceCurrent} onChange={e=>setManualSequenceCurrent(e.target.value)}/></label><label>End number<input type="number" min="1" value={manualSequenceEnd} onChange={e=>setManualSequenceEnd(e.target.value)}/></label><label>Step<input type="number" min="1" value={manualSequenceStep} onChange={e=>setManualSequenceStep(e.target.value)}/></label></div>}
     <div className="automationRules"><div className="sectionLabel">5 · IF / THEN</div><label className="checkRow"><input type="checkbox" checked={manualIfEnabled} onChange={e=>setManualIfEnabled(e.target.checked)}/><span>Enable IF / THEN automation</span></label>{manualIfEnabled&&<><div className="ruleBox"><strong>IF</strong><div className="threeCols"><select value={manualConditionSource} onChange={e=>setManualConditionSource(e.target.value as any)}><option value="result">Current result</option><option value="previousResult">Previous result</option><option value="changed">Changed state</option><option value="time">Current time</option><option value="day">Day of week</option></select><select value={manualConditionOperator} onChange={e=>setManualConditionOperator(e.target.value as any)}><option value="contains">contains</option><option value="not_contains">does not contain</option><option value="equals">equals</option><option value="not_equals">does not equal</option><option value="starts_with">starts with</option><option value="ends_with">ends with</option><option value="greater_than">greater than</option><option value="less_than">less than</option><option value="greater_or_equal">greater/equal</option><option value="less_or_equal">less/equal</option></select><input value={manualConditionValue} onChange={e=>setManualConditionValue(e.target.value)} placeholder="value"/></div></div><label>THEN<select value={manualThen} onChange={e=>setManualThen(e.target.value as "notify"|"stop"|"notify_and_stop"|"sound"|"create_task")}><option value="notify">🔔 Notify me</option><option value="stop">⏹️ Stop this task</option><option value="notify_and_stop">🔔 Notify + stop</option><option value="sound">🔊 Play a sound</option><option value="create_task">🤖 Create a follow-up task with AI</option></select></label>
  {manualIfEnabled&&<div className="ruleBox"><label className="checkRow"><input type="checkbox" checked={manualSecondIfEnabled} onChange={e=>setManualSecondIfEnabled(e.target.checked)}/><span>＋ Add another IF condition (AND)</span></label>{manualSecondIfEnabled&&<div className="threeCols"><select value={manualSecondSource} onChange={e=>setManualSecondSource(e.target.value as any)}><option value="result">Current result</option><option value="previousResult">Previous result</option><option value="changed">Changed state</option><option value="time">Current time</option><option value="day">Day of week</option></select><select value={manualSecondOperator} onChange={e=>setManualSecondOperator(e.target.value as any)}><option value="equals">equals</option><option value="contains">contains</option><option value="not_equals">does not equal</option><option value="greater_than">greater than</option><option value="less_than">less than</option><option value="greater_or_equal">greater/equal</option><option value="less_or_equal">less/equal</option></select><input value={manualSecondValue} onChange={e=>setManualSecondValue(e.target.value)} placeholder="e.g. Sunday or 17:00"/></div>}</div>}</>}<label className="checkRow"><input type="checkbox" checked={manualNotifyChange} onChange={e=>setManualNotifyChange(e.target.checked)}/><span>Notify only when the result changes</span></label></div>
     {error&&<div className="error">{error}</div>}<button className="primary wide" onClick={makeManualTask}>{editingId?"✓ Save changes":"＋ Create manual task"}</button>
