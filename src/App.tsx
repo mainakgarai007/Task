@@ -51,6 +51,8 @@ function App(){
  const [manualWeekday,setManualWeekday]=useState("1");
  const [manualWeekdays,setManualWeekdays]=useState<number[]>([1]);
  const [manualMonthDay,setManualMonthDay]=useState("1");
+  const [manualMonths,setManualMonths]=useState<number[]>([0,1,2,3,4,5,6,7,8,9,10,11]);
+  const [manualMonthDays,setManualMonthDays]=useState<number[]>([1]);
  const [manualType,setManualType]=useState<"reminder"|"weather"|"news"|"anime"|"movie"|"web">("reminder");
  const [manualMessage,setManualMessage]=useState("");
  const [manualLocation,setManualLocation]=useState("");
