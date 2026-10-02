@@ -35,6 +35,7 @@ export interface TaskAction{
  condition?:string;
  stopCondition?:string;
  conditionRule?:TaskCondition;
+ conditionThen?:"notify"|"stop"|"notify_and_stop";
  stopConditionRule?:TaskCondition;
  notifyOnChange?:boolean;
  category?:string;
