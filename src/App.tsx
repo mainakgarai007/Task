@@ -178,10 +178,10 @@ function App(){
   setManualStopCondition(task.action?.stopCondition||"");
   setManualConditionSource(task.action?.conditionRule?.source||"result");
   setManualConditionOperator(task.action?.conditionRule?.operator||"contains");
-  setManualConditionValue(task.action?.conditionRule?.value??task.action?.condition||"");
+  setManualConditionValue((task.action?.conditionRule?.value??task.action?.condition)||"");
   setManualStopSource(task.action?.stopConditionRule?.source||"result");
   setManualStopOperator(task.action?.stopConditionRule?.operator||"contains");
-  setManualStopValue(task.action?.stopConditionRule?.value??task.action?.stopCondition||"");
+  setManualStopValue((task.action?.stopConditionRule?.value??task.action?.stopCondition)||"");
  }
  function openEdit(task:Task){
   setError("");
