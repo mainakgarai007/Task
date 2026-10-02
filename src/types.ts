@@ -5,7 +5,7 @@ export type ExecutionMode="direct"|"ai";
 export type NotificationMode="disable"|"see"|"completed";
 export type AcknowledgementStatus="pending"|"seen"|"completed";
 export interface TaskSequence{enabled:boolean;current:number;end:number;step:number}
-export interface TaskAcknowledgement{id:string;executionId?:string;mode:"see"|"completed";status:AcknowledgementStatus;createdAt:string;updatedAt?:string;remindEveryMinutes?:number;nextReminderAt?:string;sequenceValue?:number}
+export interface TaskAcknowledgement{id:string;executionId?:string;mode:"see"|"completed";status:AcknowledgementStatus;createdAt:string;updatedAt?:string;remindEveryMinutes?:number;nextReminderAt?:string;sequenceValue?:number;terminalAfterAcknowledgement?:boolean}
 export type ActionType="reminder"|"weather"|"news"|"anime"|"movie"|"web"|"ai";
 export type ConditionSource="result"|"previousResult"|"changed"|"time"|"day";
 export type ConditionOperator="contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal";
