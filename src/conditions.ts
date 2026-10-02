@@ -32,7 +32,7 @@ export function evaluateCondition(
   if(rule.operator==="not_equals")return actual!==expected;
   return false;
  }
- const extracted=fieldValue(rule,source);
+ const extracted=rule.field==="new_items"?String(values.newItems||""):rule.field==="removed_items"?String(values.removedItems||""):fieldValue(rule,source);
  const actual=normalize(extracted),expected=normalize(rule.value||"");
  switch(rule.operator){
   case "contains":return actual.includes(expected);
