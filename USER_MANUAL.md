@@ -9,6 +9,26 @@ Supported schedules: once, hourly, daily, weekly, monthly and custom minute inte
 ## Actions
 Weather supports Indian city/town search and saved or automatic device location. Anime supports title/topic monitoring and update scopes. News and Movies support topic, language and region. Web/RSS tasks accept a public URL or feed.
 
+### RSS / Atom monitoring
+For a Web task, enter a public RSS or Atom feed URL.
+
+Each check extracts up to 20 latest readable items with:
+- title
+- source (when provided)
+- published/updated date (when provided)
+- item link (when provided)
+
+The result is passed through the app's meaningful change detector. This means unchanged feeds do not trigger a change notification, while newly appearing items can be surfaced as new content.
+
+Example:
+
+```
+Every hour
+→ Web / RSS
+→ https://example.com/feed.xml
+→ Notify only when the result changes
+```
+
 ## Advanced IF / THEN
 Enable advanced automation to build a condition tree.
 
