@@ -118,8 +118,10 @@ The app does not require a paid anime API key.
 
 ### 🌐 Web / RSS
 - Public URL monitoring
-- RSS/public feed support
-- Change detection
+- RSS/Atom feed parsing with title, source, date and link extraction
+- Up to 20 latest feed items retained per check
+- New-item detection through the change-detection engine
+- Duplicate unchanged feed results are suppressed
 - Conditions and stop rules
 
 ### 🔔 Notifications
