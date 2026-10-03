@@ -188,17 +188,40 @@ export async function fetchWebUpdate(url:string):Promise<string>{
  const target=url.trim();
  if(!/^https?:\/\//i.test(target))throw new Error("Enter a valid http/https URL.");
  const urls=[target,"https://api.allorigins.win/raw?url="+encodeURIComponent(target)];
- let body="";
+ let body="",contentType="";
  for(const u of urls){
-  try{const r=await fetch(u);if(r.ok){body=await r.text();if(body)break;}}catch{}
+  try{
+   const r=await fetch(u);
+   if(r.ok){
+    body=await r.text();
+    contentType=String(r.headers.get("content-type")||"");
+    if(body)break;
+   }
+  }catch{}
  }
  if(!body)throw new Error("Could not fetch the URL right now.");
+
+ const looksLikeRss=/\.(xml|rss)(?:[?#]|$)/i.test(target)||/\/feed(?:[./?#]|$)|rss|atom/i.test(target)||/<(?:rss|feed)\b/i.test(body);
+ if(looksLikeRss){
+  const xml=new DOMParser().parseFromString(body,"text/xml");
+  if(xml.querySelector("parsererror"))throw new Error("The feed returned invalid XML.");
+  const entries=[...xml.querySelectorAll("item, entry")].slice(0,20).map((item,i)=>{
+   const title=item.querySelector("title")?.textContent?.trim()||"Untitled item";
+   const linkNode=item.querySelector("link");
+   const href=linkNode?.getAttribute("href")||linkNode?.textContent?.trim()||"";
+   const date=item.querySelector("pubDate, published, updated, date")?.textContent?.trim()||"";
+   const source=item.querySelector("source")?.textContent?.trim()||"";
+   return (i+1)+". "+title+(source?" — "+source:"")+(date?" · "+date:"")+(href?" · "+href:"");
+  });
+  if(!entries.length)throw new Error("The RSS/Atom feed contains no readable items.");
+  return entries.join("\n");
+ }
+
  const doc=new DOMParser().parseFromString(body,"text/html");
  const title=doc.querySelector("title")?.textContent?.trim();
  const text=(doc.body?.textContent||body).replace(/\s+/g," ").trim().slice(0,1200);
  return (title?title+"\n":"")+text;
 }
-
 export async function executeDirectTask(task:Task):Promise<string>{
  const a=task.action;
  if(!a)return task.prompt;
