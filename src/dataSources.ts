@@ -184,51 +184,95 @@ export async function fetchNews(topic:string,language="en"):Promise<string>{
  return fetchRss(topic,language);
 }
 
-export async function fetchWebUpdate(url:string):Promise<string>{
- const target=url.trim();
- if(!/^https?:\/\//i.test(target))throw new Error("Enter a valid http/https URL.");
+export export interface FeedItem{id:string;title:string;link:string;published?:string;source?:string;description?:string;}
+
+async function fetchFeedBody(target:string):Promise<string>{
  const urls=[target,"https://api.allorigins.win/raw?url="+encodeURIComponent(target)];
- let body="",contentType="";
  for(const u of urls){
-  try{
-   const r=await fetch(u);
-   if(r.ok){
-    body=await r.text();
-    contentType=String(r.headers.get("content-type")||"");
-    if(body)break;
-   }
-  }catch{}
+  try{const r=await fetch(u);if(r.ok){const body=await r.text();if(body)return body;}}catch{}
  }
- if(!body)throw new Error("Could not fetch the URL right now.");
+ throw new Error("Could not fetch the feed right now.");
+}
 
- const looksLikeRss=/\.(xml|rss)(?:[?#]|$)/i.test(target)||/\/feed(?:[./?#]|$)|rss|atom/i.test(target)||/<(?:rss|feed)\b/i.test(body);
+function parseFeedItems(body:string):FeedItem[]{
+ const xml=new DOMParser().parseFromString(body,"text/xml");
+ if(xml.querySelector("parsererror"))throw new Error("The feed returned invalid XML.");
+ const nodes=[...xml.querySelectorAll("item, entry")];
+ if(!nodes.length)throw new Error("The RSS/Atom feed contains no readable items.");
+ return nodes.slice(0,100).map((item,i)=>{
+  const title=item.querySelector("title")?.textContent?.trim()||"Untitled item";
+  const linkNode=item.querySelector("link");
+  const link=linkNode?.getAttribute("href")||linkNode?.textContent?.trim()||"";
+  const published=item.querySelector("pubDate, published, updated, date")?.textContent?.trim()||"";
+  const source=item.querySelector("source")?.textContent?.trim()||"";
+  const description=item.querySelector("description, summary, content")?.textContent?.replace(/<[^>]+>/g," ").replace(/\\s+/g," ").trim()||"";
+  const guid=item.querySelector("guid, id")?.textContent?.trim()||"";
+  const id=guid||link||title+"|"+published||String(i);
+  return {id,title,link,published,source,description};
+ });
+}
+
+export async function fetchFeedItems(url:string):Promise<FeedItem[]>{
+ const target=url.trim();
+ if(!/^https?:\\/\\//i.test(target))throw new Error("Enter a valid http/https RSS/Atom URL.");
+ return parseFeedItems(await fetchFeedBody(target));
+}
+
+function rssCacheKey(taskId:string,url:string){return "tasks-rss-seen:v2:"+taskId+":"+url.trim().toLowerCase();}
+function readSeenItems(taskId:string,url:string,ttlDays:number){
+ try{
+  const raw=localStorage.getItem(rssCacheKey(taskId,url));
+  const data=raw?JSON.parse(raw):{};
+  const cutoff=Date.now()-Math.max(1,ttlDays)*86400000;
+  const clean=Object.fromEntries(Object.entries(data||{}).filter(([,v]:any)=>Number(v?.detectedAt||0)>=cutoff));
+  return clean as Record<string,{detectedAt:number}>;
+ }catch{return {};}
+}
+function writeSeenItems(taskId:string,url:string,seen:Record<string,{detectedAt:number}>){
+ try{
+  const entries=Object.entries(seen).sort((a,b)=>b[1].detectedAt-a[1].detectedAt).slice(0,1000);
+  localStorage.setItem(rssCacheKey(taskId,url),JSON.stringify(Object.fromEntries(entries)));
+ }catch{}
+}
+
+function keywordMatch(item:FeedItem,keywords:string[],mode:"and"|"or"){
+ const ks=keywords.map(x=>x.trim().toLowerCase()).filter(Boolean);
+ if(!ks.length)return true;
+ const hay=(item.title+" "+item.description+" "+item.link).toLowerCase();
+ return mode==="or"?ks.some(k=>hay.includes(k)):ks.every(k=>hay.includes(k));
+}
+
+export async function fetchRssNewItems(task:Task):Promise<{items:FeedItem[];history:RssItemRecord[];result:string}>{
+ const url=task.action.url||"";
+ const all=await fetchFeedItems(url);
+ const keywords=task.action.rssKeywords||[];
+ const mode=task.action.rssKeywordMode||"or";
+ const filtered=all.filter(item=>keywordMatch(item,keywords,mode));
+ const seen=readSeenItems(task.id,url,task.action.rssSeenTtlDays||30);
+ const now=Date.now();
+ const fresh=filtered.filter(item=>!seen[item.id]);
+ const limited=fresh.slice(0,Math.max(1,Math.min(50,task.action.rssMaxItems||20)));
+ const records: RssItemRecord[]=limited.map(item=>({id:item.id,title:item.title,link:item.link,published:item.published,detectedAt:new Date(now).toISOString()}));
+ for(const item of fresh)seen[item.id]={detectedAt:now};
+ writeSeenItems(task.id,url,seen);
+ const history=[...(task.action.rssHistory||[]),...records].slice(-200);
+ const result=limited.length
+  ? limited.map((x,i)=>`${i+1}. ${x.title}${x.published?" · "+x.published:""}${x.link?" · "+x.link:""}`).join("\\n")
+  : "No new RSS/Atom items detected.";
+ return {items:limited,history,result};
+}
+
+async function fetchWebUpdate(url:string):Promise<string>{
+ const target=url.trim();
+ if(!/^https?:\\/\\//i.test(target))throw new Error("Enter a valid http/https URL.");
+ const body=await fetchFeedBody(target);
+ const looksLikeRss=/<(?:rss|feed)\\b/i.test(body)||/<(?:item|entry)\\b/i.test(body)||/\\.(?:xml|rss)(?:[?#]|$)/i.test(target)||/\\/feed(?:[./?#]|$)/i.test(target);
  if(looksLikeRss){
-  const xml=new DOMParser().parseFromString(body,"text/xml");
-  if(xml.querySelector("parsererror"))throw new Error("The feed returned invalid XML.");
-  const entries=[...xml.querySelectorAll("item, entry")].slice(0,20).map((item,i)=>{
-   const title=item.querySelector("title")?.textContent?.trim()||"Untitled item";
-   const linkNode=item.querySelector("link");
-   const href=linkNode?.getAttribute("href")||linkNode?.textContent?.trim()||"";
-   const date=item.querySelector("pubDate, published, updated, date")?.textContent?.trim()||"";
-   const source=item.querySelector("source")?.textContent?.trim()||"";
-   return (i+1)+". "+title+(source?" — "+source:"")+(date?" · "+date:"")+(href?" · "+href:"");
-  });
-  if(!entries.length)throw new Error("The RSS/Atom feed contains no readable items.");
-  return entries.join("\n");
+  return parseFeedItems(body).slice(0,20).map((x,i)=>(i+1)+". "+x.title+(x.source?" — "+x.source:"")+(x.published?" · "+x.published:"")+(x.link?" · "+x.link:"")).join("\\n");
  }
-
  const doc=new DOMParser().parseFromString(body,"text/html");
  const title=doc.querySelector("title")?.textContent?.trim();
- const text=(doc.body?.textContent||body).replace(/\s+/g," ").trim().slice(0,1200);
- return (title?title+"\n":"")+text;
+ const text=(doc.body?.textContent||body).replace(/\\s+/g," ").trim().slice(0,1200);
+ return (title?title+"\\n":"")+text;
 }
-export async function executeDirectTask(task:Task):Promise<string>{
- const a=task.action;
- if(!a)return task.prompt;
- if(a.type==="reminder")return a.message||task.prompt;
- if(a.type==="weather"){if(a.locationMode==="auto-live"){const live=await resolveAutoWeatherLocation("auto-live");return await fetchWeather(live.label,{latitude:live.latitude,longitude:live.longitude});}return await fetchWeather(a.location||"Current location",{latitude:a.latitude,longitude:a.longitude});}
- if(a.type==="anime")return await fetchAnime(a.topic||task.prompt,a.language||"en",a.scope||"all updates",a.animeId,a.animeSource);
- if(a.type==="news"||a.type==="movie"){const prefix=a.type==="movie"?"movie ":"";const scope=a.scope?" "+a.scope:"";return await fetchNews(prefix+(a.topic||task.prompt)+scope,a.language||"en");}
- if(a.type==="web")return await fetchWebUpdate(a.url||"");
- return task.prompt;
-}
+

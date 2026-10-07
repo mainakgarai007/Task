@@ -9,7 +9,7 @@ export interface TaskAcknowledgement{id:string;executionId?:string;mode:"see"|"c
 export type ActionType="reminder"|"weather"|"news"|"anime"|"movie"|"web"|"ai";
 export type ThenActionType="notify"|"reminder"|"wait"|"sound"|"open_link"|"create_task"|"stop"|"complete"|"save_result"|"run_task";
 export type NotificationSound="none"|"default"|"soft"|"chime"|"alert"|"beep";
-export interface TaskThenAction{type:ThenActionType;seconds?:number;minutes?:number;message?:string;url?:string;taskId?:string;sound?:NotificationSound;}
+export interface TaskThenAction{type:ThenActionType;seconds?:number;minutes?:number;message?:string;url?:string;taskId?:string;sound?:NotificationSound;}\nexport interface RssItemRecord{id:string;title:string;link:string;published?:string;detectedAt:string;}
 export type ConditionSource="result"|"previousResult"|"changed"|"time"|"day";
 export type ConditionOperator="contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal";
 export type ConditionField="result"|"weather"|"temperature"|"feels_like"|"rain_probability"|"cloud_cover"|"humidity"|"wind"|"uv"|"visibility"|"time"|"day"|"changed"|"new_items"|"removed_items"|"updated_items";
@@ -21,7 +21,7 @@ export interface TaskSchedule{
  time:string;startDate?:string;endDate?:string;weekday?:number;weekdays?:number[];months?:number[];monthDay?:number;monthDays?:number[];intervalMinutes?:number;maxRuns?:number;notifyOnChange?:boolean;
 }
 export interface TaskAction{
- type:ActionType;message?:string;location?:string;locationMode?:"manual"|"auto-once"|"auto-live";latitude?:number;longitude?:number;topic?:string;animeId?:number;animeSource?:"anilist"|"jikan";language?:string;url?:string;scope?:string;region?:string;condition?:string;stopCondition?:string;conditionRule?:TaskCondition;conditionRules?:TaskCondition[];conditionJoin?:"all"|"any";conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task"|"wait";waitMinutes?:number;thenActions?:TaskThenAction[];stopConditionRule?:TaskCondition;conditionTree?:TaskConditionGroup;stopConditionTree?:TaskConditionGroup;notifyOnChange?:boolean;notificationSound?:NotificationSound;category?:string;
+ type:ActionType;message?:string;location?:string;locationMode?:"manual"|"auto-once"|"auto-live";latitude?:number;longitude?:number;topic?:string;animeId?:number;animeSource?:"anilist"|"jikan";language?:string;url?:string;scope?:string;region?:string;condition?:string;stopCondition?:string;conditionRule?:TaskCondition;conditionRules?:TaskCondition[];conditionJoin?:"all"|"any";conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task"|"wait";waitMinutes?:number;thenActions?:TaskThenAction[];stopConditionRule?:TaskCondition;conditionTree?:TaskConditionGroup;stopConditionTree?:TaskConditionGroup;notifyOnChange?:boolean;notificationSound?:NotificationSound;category?:string;rssKeywords?:string[];rssKeywordMode?:"and"|"or";rssMaxItems?:number;rssSeenTtlDays?:number;rssHistory?:RssItemRecord[];
 }
 export type ChangeKind="none"|"new_items"|"removed_items"|"updated"|"mixed";
 export interface TaskChange{kind:ChangeKind;changed:boolean;newItems:string[];removedItems:string[];updatedItems:string[];summary:string;detectedAt:string;}
