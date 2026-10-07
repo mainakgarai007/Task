@@ -46,6 +46,16 @@ function detectMeaningfulChange(previous:string,current:string,detectedAt:string
  if(!parts.length)parts.push("Updated content detected.");
  return {kind,changed:Boolean(added.length||removed.length||updated.length),newItems:added,removedItems:removed,updatedItems:updated,summary:parts.join(" · "),detectedAt};
 }
+function parseRssResultHistory(result:string,detectedAt:string):RssItemRecord[]{
+ return result.split(/\n+/).map(x=>x.trim()).filter(Boolean).map(line=>{
+  const clean=line.replace(/^\d+[.)]\s*/,"");
+  const parts=clean.split(" · ");
+  const title=parts[0]||clean;
+  const link=[...parts].reverse().find(x=>/^https?:\/\//i.test(x))||"";
+  const published=parts.slice(1).find(x=>x!==link)||undefined;
+  return {id:link||title+"|"+(published||""),title,link,published,detectedAt};
+ });
+}
 function DateField({value,onChange,placeholder="DD/MM/YYYY"}:{value:string;onChange:(value:string)=>void;placeholder?:string}){const [draft,setDraft]=useState(()=>formatDateDMY(value));useEffect(()=>setDraft(formatDateDMY(value)),[value]);function change(raw:string){const digits=raw.replace(/\D/g,"").slice(0,8);let next=digits;if(digits.length>4)next=digits.slice(0,2)+"/"+digits.slice(2,4)+"/"+digits.slice(4);else if(digits.length>2)next=digits.slice(0,2)+"/"+digits.slice(2);setDraft(next);if(next==="")onChange("");else if(next.length===10){const iso=parseDateDMY(next);if(iso)onChange(iso);}}return <input type="text" inputMode="numeric" autoComplete="off" maxLength={10} value={draft} onChange={e=>change(e.target.value)} onBlur={()=>{if(draft&&draft.length===10&&!parseDateDMY(draft))setDraft(formatDateDMY(value));}} placeholder={placeholder} aria-label={placeholder}/>}
 function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string,intervalMinutes=60,weekdays:number[]=[Number(weekday)],months:number[]=Array.from({length:12},(_,i)=>i),monthDays:number[]=[Number(monthDay)||1]){
  const now=new Date();
@@ -261,7 +271,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    const recurringNext=manual&&task.frequency!=="once"?(()=>{let candidate=new Date(task.nextRun),guard=0;while(candidate.getTime()<=Date.now()&&guard++<1000)candidate=new Date(nextRun(candidate,task.frequency,task.schedule));return candidate.toISOString();})():nextRun(new Date(),task.frequency,task.schedule);
    const sequenceValue=task.sequence?.enabled?task.sequence.current:undefined;
    const acknowledgement:TaskAcknowledgement|undefined=requiresAcknowledgement?{id:uid(),executionId:record.id,mode:task.notificationMode==="completed"?"completed":"see",status:"pending",createdAt:finished,remindEveryMinutes:task.notificationMode==="completed"?Math.max(1,task.remindIfNotCompletedMinutes||5):undefined,nextReminderAt:task.notificationMode==="completed"?new Date(Date.now()+Math.max(1,task.remindIfNotCompletedMinutes||5)*60000).toISOString():undefined,sequenceValue,terminalAfterAcknowledgement:terminalAfterExecution}:undefined;
-   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastChange:change,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!executionEnded,status:executionEnded?"completed":"active",nextRun:executionEnded?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement,action:task.action?.rssMonitor?{...t.action,rssHistory:[...(t.action.rssHistory||[]),...change.newItems.map((title,i)=>({id:title,title,link:"",detectedAt:finished} as RssItemRecord))].slice(-200)}:t.action}:t));
+   setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastChange:change,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!executionEnded,status:executionEnded?"completed":"active",nextRun:executionEnded?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement,action:task.action?.rssMonitor?{...t.action,rssHistory:[...(t.action.rssHistory||[]),...parseRssResultHistory(result,finished)].slice(-200)}:t.action}:t));
    if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+(change.changed?change.summary:result.slice(0,300)),{taskId:id,ackId:acknowledgement.id,sound:task.action?.notificationSound||"default"});
    // A plain direct task must still notify when acknowledgement mode is disabled.
    // IF/THEN chains own their notifications, so avoid duplicate alerts there.

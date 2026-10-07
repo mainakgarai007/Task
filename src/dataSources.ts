@@ -250,6 +250,8 @@ export async function fetchRssNewItems(task:Task):Promise<{items:FeedItem[];hist
  const filtered=all.filter(item=>keywordMatch(item,keywords,mode));
  const seen=readSeenItems(task.id,url,task.action.rssSeenTtlDays||30);
  const now=Date.now();
+ const hasSeed=Object.keys(seen).length>0;
+ if(!hasSeed){for(const item of filtered)seen[item.id]={detectedAt:now};writeSeenItems(task.id,url,seen);return {items:[],history:task.action.rssHistory||[],result:"RSS monitor initialized; existing items were seeded without notification."};}
  const fresh=filtered.filter(item=>!seen[item.id]);
  const limited=fresh.slice(0,Math.max(1,Math.min(50,task.action.rssMaxItems||20)));
  const records: RssItemRecord[]=limited.map(item=>({id:item.id,title:item.title,link:item.link,published:item.published,detectedAt:new Date(now).toISOString()}));

@@ -33,6 +33,7 @@ export function evaluateCondition(
   return false;
  }
  const extracted=rule.field==="new_items"?String(values.newItems||""):rule.field==="removed_items"?String(values.removedItems||""):rule.field==="updated_items"?String(values.updatedItems||""):fieldValue(rule,source);
+ const itemCount=rule.field==="new_items"||rule.field==="removed_items"||rule.field==="updated_items"?extracted.split(/\n+/).map(x=>x.trim()).filter(Boolean).length:null;
  const actual=normalize(extracted),expected=normalize(rule.value||"");
  switch(rule.operator){
   case "contains":return actual.includes(expected);
@@ -41,10 +42,10 @@ export function evaluateCondition(
   case "not_equals":return actual!==expected;
   case "starts_with":return actual.startsWith(expected);
   case "ends_with":return actual.endsWith(expected);
-  case "greater_than":{const a=numeric(extracted),b=numeric(rule.value||"");return a!==null&&b!==null&&a>b;}
-  case "less_than":{const a=numeric(extracted),b=numeric(rule.value||"");return a!==null&&b!==null&&a<b;}
-  case "greater_or_equal":{const a=numeric(extracted),b=numeric(rule.value||"");return a!==null&&b!==null&&a>=b;}
-  case "less_or_equal":{const a=numeric(extracted),b=numeric(rule.value||"");return a!==null&&b!==null&&a<=b;}
+  case "greater_than":{const a=itemCount!==null?itemCount:numeric(extracted),b=numeric(rule.value||"");return a!==null&&b!==null&&a>b;}
+  case "less_than":{const a=itemCount!==null?itemCount:numeric(extracted),b=numeric(rule.value||"");return a!==null&&b!==null&&a<b;}
+  case "greater_or_equal":{const a=itemCount!==null?itemCount:numeric(extracted),b=numeric(rule.value||"");return a!==null&&b!==null&&a>=b;}
+  case "less_or_equal":{const a=itemCount!==null?itemCount:numeric(extracted),b=numeric(rule.value||"");return a!==null&&b!==null&&a<=b;}
   default:return false;
  }
 }
