@@ -12,7 +12,7 @@ export type NotificationSound="none"|"default"|"soft"|"chime"|"alert"|"beep";
 export interface TaskThenAction{type:ThenActionType;seconds?:number;minutes?:number;message?:string;url?:string;taskId?:string;sound?:NotificationSound;}
 export type ConditionSource="result"|"previousResult"|"changed"|"time"|"day";
 export type ConditionOperator="contains"|"not_contains"|"equals"|"not_equals"|"starts_with"|"ends_with"|"greater_than"|"less_than"|"greater_or_equal"|"less_or_equal";
-export type ConditionField="result"|"weather"|"temperature"|"feels_like"|"rain_probability"|"cloud_cover"|"humidity"|"wind"|"uv"|"visibility"|"time"|"day"|"changed"|"new_items"|"removed_items";
+export type ConditionField="result"|"weather"|"temperature"|"feels_like"|"rain_probability"|"cloud_cover"|"humidity"|"wind"|"uv"|"visibility"|"time"|"day"|"changed"|"new_items"|"removed_items"|"updated_items";
 export interface TaskCondition{type?:"condition";source:ConditionSource;operator:ConditionOperator;value?:string;field?:ConditionField}
 export interface TaskConditionGroup{type:"group";join:"all"|"any";negated?:boolean;children:TaskConditionNode[]}
 export type TaskConditionNode=TaskCondition|TaskConditionGroup;
@@ -24,7 +24,7 @@ export interface TaskAction{
  type:ActionType;message?:string;location?:string;locationMode?:"manual"|"auto-once"|"auto-live";latitude?:number;longitude?:number;topic?:string;animeId?:number;animeSource?:"anilist"|"jikan";language?:string;url?:string;scope?:string;region?:string;condition?:string;stopCondition?:string;conditionRule?:TaskCondition;conditionRules?:TaskCondition[];conditionJoin?:"all"|"any";conditionThen?:"notify"|"stop"|"notify_and_stop"|"sound"|"create_task"|"wait";waitMinutes?:number;thenActions?:TaskThenAction[];stopConditionRule?:TaskCondition;conditionTree?:TaskConditionGroup;stopConditionTree?:TaskConditionGroup;notifyOnChange?:boolean;notificationSound?:NotificationSound;category?:string;
 }
 export type ChangeKind="none"|"new_items"|"removed_items"|"updated"|"mixed";
-export interface TaskChange{kind:ChangeKind;changed:boolean;newItems:string[];removedItems:string[];summary:string;detectedAt:string;}
+export interface TaskChange{kind:ChangeKind;changed:boolean;newItems:string[];removedItems:string[];updatedItems:string[];summary:string;detectedAt:string;}
 export interface ExecutionRecord{id:string;startedAt:string;finishedAt:string;status:"success"|"failed";result?:string;error?:string;change?:TaskChange;}
 export interface Task{
  id:string;title:string;prompt:string;frequency:Frequency;nextRun:string;enabled:boolean;status:TaskStatus;createdAt:string;lastRun?:string;runCount:number;history:string[];executions?:ExecutionRecord[];lastResult?:string;previousResult?:string;lastError?:string;lastChange?:TaskChange;executionMode:ExecutionMode;action:TaskAction;schedule?:TaskSchedule;executionState?:ExecutionState;waitingReason?:string;notificationMode?:NotificationMode;remindIfNotCompletedMinutes?:number;pendingAcknowledgement?:TaskAcknowledgement;acknowledgements?:TaskAcknowledgement[];sequence?:TaskSequence;

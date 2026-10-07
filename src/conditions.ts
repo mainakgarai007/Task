@@ -22,7 +22,7 @@ function fieldValue(rule:TaskCondition,source:string){
 
 export function evaluateCondition(
  rule:TaskCondition,
- values:{result:string;previousResult:string;changed:boolean;newItems?:string;removedItems?:string;time?:string;day?:string}
+ values:{result:string;previousResult:string;changed:boolean;newItems?:string;removedItems?:string;updatedItems?:string;time?:string;day?:string}
 ):boolean{
  const source=rule.source==="previousResult"?values.previousResult:rule.source==="changed"?String(values.changed):rule.source==="time"?String(values.time||""):rule.source==="day"?String(values.day||""):values.result;
  if(rule.source==="changed"){
@@ -32,7 +32,7 @@ export function evaluateCondition(
   if(rule.operator==="not_equals")return actual!==expected;
   return false;
  }
- const extracted=rule.field==="new_items"?String(values.newItems||""):rule.field==="removed_items"?String(values.removedItems||""):fieldValue(rule,source);
+ const extracted=rule.field==="new_items"?String(values.newItems||""):rule.field==="removed_items"?String(values.removedItems||""):rule.field==="updated_items"?String(values.updatedItems||""):fieldValue(rule,source);
  const actual=normalize(extracted),expected=normalize(rule.value||"");
  switch(rule.operator){
   case "contains":return actual.includes(expected);
@@ -51,7 +51,7 @@ export function evaluateCondition(
 
 export function evaluateConditionTree(
  node:TaskConditionNode,
- values:{result:string;previousResult:string;changed:boolean;time?:string;day?:string}
+ values:{result:string;previousResult:string;changed:boolean;newItems?:string;removedItems?:string;updatedItems?:string;time?:string;day?:string}
 ):boolean{
  if(node.type!=="group")return evaluateCondition(node,values);
  if(node.children.length===0)return false;

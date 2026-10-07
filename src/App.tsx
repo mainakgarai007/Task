@@ -17,20 +17,34 @@ function normalizeChangeLine(value:string){
 function extractChangeItems(value:string){
  return value.split(/\n+/).map(x=>x.trim()).filter(Boolean).map(normalizeChangeLine).filter(x=>x.length>2);
 }
+function changeItemKey(value:string){
+ const line=normalizeChangeLine(value);
+ const separator=line.search(/\\s+[—|]\\s+/);
+ return separator>0?line.slice(0,separator).trim():line;
+}
 function detectMeaningfulChange(previous:string,current:string,detectedAt:string):TaskChange{
  const prev=previous.trim(),now=current.trim();
- if(!prev)return {kind:"none",changed:false,newItems:[],removedItems:[],summary:"First result saved; no previous result to compare.",detectedAt};
- if(normalizeChangeLine(prev)===normalizeChangeLine(now))return {kind:"none",changed:false,newItems:[],removedItems:[],summary:"No meaningful change detected.",detectedAt};
+ const emptyChange=(summary:string):TaskChange=>({kind:"none",changed:false,newItems:[],removedItems:[],updatedItems:[],summary,detectedAt});
+ if(!prev)return emptyChange("First result saved; no previous result to compare.");
+ if(normalizeChangeLine(prev)===normalizeChangeLine(now))return emptyChange("No meaningful change detected.");
  const oldItems=[...new Set(extractChangeItems(prev))],newItemsAll=[...new Set(extractChangeItems(now))];
  const oldSet=new Set(oldItems),newSet=new Set(newItemsAll);
- if(oldItems.length===newItemsAll.length&&oldItems.every(x=>newSet.has(x))&&newItemsAll.every(x=>oldSet.has(x)))return {kind:"none",changed:false,newItems:[],removedItems:[],summary:"No meaningful change detected.",detectedAt};
- const added=newItemsAll.filter(x=>!oldSet.has(x)),removed=oldItems.filter(x=>!newSet.has(x));
- const kind=added.length&&removed.length?"mixed":added.length?"new_items":removed.length?"removed_items":"updated";
+ if(oldItems.length===newItemsAll.length&&oldItems.every(x=>newSet.has(x))&&newItemsAll.every(x=>oldSet.has(x)))return emptyChange("No meaningful change detected.");
+ const oldByKey=new Map(oldItems.map(x=>[changeItemKey(x),x]));
+ const newByKey=new Map(newItemsAll.map(x=>[changeItemKey(x),x]));
+ const added=newItemsAll.filter(x=>!oldSet.has(x)&&!oldByKey.has(changeItemKey(x)));
+ const removed=oldItems.filter(x=>!newSet.has(x)&&!newByKey.has(changeItemKey(x)));
+ const updated=newItemsAll.filter(x=>{
+  const key=changeItemKey(x),old=oldByKey.get(key);
+  return Boolean(old&&old!==x);
+ });
+ const kind=added.length&&removed.length?"mixed":added.length?"new_items":removed.length?"removed_items":updated.length?"updated":"updated";
  const parts:string[]=[];
  if(added.length)parts.push("New: "+added.slice(0,5).join(" | "));
  if(removed.length)parts.push("Removed: "+removed.slice(0,5).join(" | "));
+ if(updated.length)parts.push("Updated: "+updated.slice(0,5).join(" | "));
  if(!parts.length)parts.push("Updated content detected.");
- return {kind,changed:true,newItems:added,removedItems:removed,summary:parts.join(" · "),detectedAt};
+ return {kind,changed:Boolean(added.length||removed.length||updated.length),newItems:added,removedItems:removed,updatedItems:updated,summary:parts.join(" · "),detectedAt};
 }
 function DateField({value,onChange,placeholder="DD/MM/YYYY"}:{value:string;onChange:(value:string)=>void;placeholder?:string}){const [draft,setDraft]=useState(()=>formatDateDMY(value));useEffect(()=>setDraft(formatDateDMY(value)),[value]);function change(raw:string){const digits=raw.replace(/\D/g,"").slice(0,8);let next=digits;if(digits.length>4)next=digits.slice(0,2)+"/"+digits.slice(2,4)+"/"+digits.slice(4);else if(digits.length>2)next=digits.slice(0,2)+"/"+digits.slice(2);setDraft(next);if(next==="")onChange("");else if(next.length===10){const iso=parseDateDMY(next);if(iso)onChange(iso);}}return <input type="text" inputMode="numeric" autoComplete="off" maxLength={10} value={draft} onChange={e=>change(e.target.value)} onBlur={()=>{if(draft&&draft.length===10&&!parseDateDMY(draft))setDraft(formatDateDMY(value));}} placeholder={placeholder} aria-label={placeholder}/>}
 function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:string,monthDay:string,intervalMinutes=60,weekdays:number[]=[Number(weekday)],months:number[]=Array.from({length:12},(_,i)=>i),monthDays:number[]=[Number(monthDay)||1]){
@@ -44,7 +58,7 @@ function buildFirstRun(date:string,time:string,frequency:Frequency,weekday:strin
 }
 
 const conditionFieldOptions:{value:ConditionField;label:string}[]=[
- {value:"result",label:"Any result text"},{value:"new_items",label:"New items"},{value:"removed_items",label:"Removed items"},{value:"weather",label:"Weather state"},{value:"temperature",label:"Temperature (°C)"},{value:"feels_like",label:"Feels like (°C)"},{value:"rain_probability",label:"Rain probability (%)"},{value:"cloud_cover",label:"Cloud cover (%)"},{value:"humidity",label:"Humidity (%)"},{value:"wind",label:"Wind (km/h)"},{value:"uv",label:"UV index"},{value:"visibility",label:"Visibility (km)"},{value:"time",label:"Time"},{value:"day",label:"Day"},{value:"changed",label:"Changed state"}
+ {value:"result",label:"Any result text"},{value:"new_items",label:"New items"},{value:"removed_items",label:"Removed items"},{value:"updated_items",label:"Updated items"},{value:"weather",label:"Weather state"},{value:"temperature",label:"Temperature (°C)"},{value:"feels_like",label:"Feels like (°C)"},{value:"rain_probability",label:"Rain probability (%)"},{value:"cloud_cover",label:"Cloud cover (%)"},{value:"humidity",label:"Humidity (%)"},{value:"wind",label:"Wind (km/h)"},{value:"uv",label:"UV index"},{value:"visibility",label:"Visibility (km)"},{value:"time",label:"Time"},{value:"day",label:"Day"},{value:"changed",label:"Changed state"}
 ];
 function newCondition():TaskCondition{return {type:"condition",source:"result",field:"result",operator:"contains",value:""}}
 function newConditionGroup():TaskConditionGroup{return {type:"group",join:"all",children:[newCondition()]}}
@@ -63,7 +77,7 @@ function ConditionBuilder({node,onChange,onRemove,depth=0}:{node:TaskConditionNo
    <div className="threeCols"><select value={leaf.source} onChange={e=>sourceChanged(e.target.value as TaskCondition["source"])}><option value="result">Current result</option><option value="previousResult">Previous result</option><option value="changed">Changed state</option><option value="time">Current time</option><option value="day">Day of week</option></select>
    <select value={leaf.field||"result"} disabled={leaf.source==="changed"||leaf.source==="time"||leaf.source==="day"} onChange={e=>onChange({...leaf,field:e.target.value as ConditionField})}>{conditionFieldOptions.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select>
    <select value={leaf.operator} onChange={e=>onChange({...leaf,operator:e.target.value as TaskCondition["operator"]})}><option value="contains">contains</option><option value="not_contains">does not contain</option><option value="equals">equals</option><option value="not_equals">does not equal</option><option value="starts_with">starts with</option><option value="ends_with">ends with</option><option value="greater_than">greater than</option><option value="less_than">less than</option><option value="greater_or_equal">greater/equal</option><option value="less_or_equal">less/equal</option></select></div>
-   <div className="thenActionRow" style={{marginTop:8}}><input value={leaf.value||""} onChange={e=>onChange({...leaf,value:e.target.value})} placeholder={leaf.field==="new_items"?"e.g. episode 7":leaf.field==="removed_items"?"e.g. episode 6":leaf.field==="weather"?"e.g. Rain":leaf.field==="day"?"e.g. Sunday":leaf.field==="time"?"e.g. 07:00":"value, e.g. 30"}/>{onRemove&&<button type="button" className="dangerBtn" onClick={onRemove}>Remove</button>}</div>
+   <div className="thenActionRow" style={{marginTop:8}}><input value={leaf.value||""} onChange={e=>onChange({...leaf,value:e.target.value})} placeholder={leaf.field==="new_items"?"e.g. episode 7":leaf.field==="removed_items"?"e.g. episode 6":leaf.field==="updated_items"?"e.g. episode 7":leaf.field==="weather"?"e.g. Rain":leaf.field==="day"?"e.g. Sunday":leaf.field==="time"?"e.g. 07:00":"value, e.g. 30"}/>{onRemove&&<button type="button" className="dangerBtn" onClick={onRemove}>Remove</button>}</div>
   </div>;
  }
  const group=node; const updateChild=(index:number,next:TaskConditionNode)=>onChange({...group,children:group.children.map((child,i)=>i===index?next:child)});
@@ -233,7 +247,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    const trackedUpdate=["new episode","new season","release date","only when changed"].includes(scope);
    const nowForCondition=new Date(finished);
    const conditionValues={result,previousResult:previous,changed,time:nowForCondition.toTimeString().slice(0,5),day:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][nowForCondition.getDay()]};
-   const conditionValuesWithChange={...conditionValues,newItems:change.newItems.join("\n"),removedItems:change.removedItems.join("\n")};
+   const conditionValuesWithChange={...conditionValues,newItems:change.newItems.join("\n"),removedItems:change.removedItems.join("\n"),updatedItems:change.updatedItems.join("\n")};
    const rules=task.action?.conditionRules?.length?task.action.conditionRules:(task.action?.conditionRule?[task.action.conditionRule]:[]);
    const conditionMatched=task.action?.conditionTree?evaluateConditionTree(task.action.conditionTree,conditionValuesWithChange):rules.length?(task.action?.conditionJoin==="any"?rules.some(rule=>evaluateCondition(rule,conditionValuesWithChange)):rules.every(rule=>evaluateCondition(rule,conditionValuesWithChange))):(!task.action?.condition||normalize(result).includes(normalize(task.action.condition)));
    const conditionThen=task.action?.conditionThen||"notify";
