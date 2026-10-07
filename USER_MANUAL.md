@@ -6,6 +6,18 @@ Tap **＋** and choose Manual or AI. Manual mode lets you choose the schedule, a
 ## Scheduling
 Supported schedules: once, hourly, daily, weekly, monthly and custom minute intervals. Start date, end date, multiple weekdays, multiple months, month-days and maximum run count are supported.
 
+
+### Notification sounds
+Each task can now choose its notification sound:
+- 🔔 Default
+- 🌙 Soft
+- 🎵 Chime
+- 🚨 Alert
+- 📟 Beep
+- 🔕 No sound
+
+Use **Preview sound** while creating/editing a task. The selected sound ID is saved with the task and is also designed to be mapped to native Android/APK notification sounds later. The browser version uses lightweight audio presets; Android notification-channel sound behavior will be handled by the native APK layer.
+
 ## Actions
 Weather supports Indian city/town search and saved or automatic device location. Anime supports title/topic monitoring and update scopes. News and Movies support topic, language and region. Web/RSS tasks accept a public URL or feed.
 
