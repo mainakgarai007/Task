@@ -7,3 +7,46 @@ input[type="date"],input[type="time"]{position:relative;background-color:#0b0b0d
 .autoLocationBox{display:grid;gap:10px}.autoLocationBox .wide{width:100%}.autoLocationBox .secondary{border:1px solid #303036;background:#151519;color:#f4f4f5;border-radius:12px;padding:13px;font-weight:650}.autoLocationBox .secondary:disabled{opacity:.6}.weatherLocationBox select{margin-bottom:2px}.locationSelected{line-height:1.45}
 .weekdayPicker,.monthSelector,.monthDaySelector{margin:4px 0 14px}.fieldLabel{display:block;font-size:12px;color:#a1a1aa;margin-bottom:8px}.weekdayGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}.dayChip,.monthChip,.monthDayChip{border:1px solid #2b2b31;background:#101014;color:#c4c4cc;border-radius:9px;cursor:pointer;font:inherit}.dayChip{padding:10px 4px;font-size:11px}.dayChip.selected,.monthChip.selected,.monthDayChip.selected{border-color:#5f9f7f;background:#17201b;color:#fff}.dayPresets{display:flex;gap:7px;flex-wrap:wrap;margin:7px 0 8px}.dayPresets button{border:1px solid #303036;background:#18181b;color:#d4d4d8;border-radius:9px;padding:7px 9px;font-size:11px;cursor:pointer}.dayPresets button:hover{background:#222227}.monthGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.monthChip{padding:9px 5px;font-size:11px}.monthDayGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}.monthDayChip{padding:8px 3px;font-size:11px}.sequenceHint{margin:-2px 0 8px}.automationRules{display:grid;gap:12px}.checkRow{display:flex;align-items:center;gap:10px;padding:10px 0}.checkRow input{width:18px;height:18px;accent-color:#fff}.backupBar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.backupBar button{border:1px solid #2b2b31;background:#151519;color:#eee;border-radius:12px;padding:10px 14px}.historyList{display:grid;gap:10px;max-height:60vh;overflow:auto}.historyItem{border:1px solid #2b2b31;border-radius:14px;padding:12px;background:#101014}.historyItem strong{display:block}.historyItem small{display:block;opacity:.65;margin:4px 0 8px}.historyItem p{white-space:pre-wrap;word-break:break-word;margin:0;line-height:1.45}.actions{flex-wrap:wrap}
 .manualBtn{width:46px;height:46px;border:1px solid #2b2b31;border-radius:14px;background:#111114;color:#f4f4f5;font-size:20px;font-weight:800}.manualContent{display:grid;gap:18px;max-height:70vh;overflow:auto;padding-right:4px}.manualContent section{border:1px solid #29292f;background:#101014;border-radius:16px;padding:15px}.manualContent h3{margin:0 0 8px;font-size:16px}.manualContent p,.manualContent li{color:#b8b8c0;line-height:1.55}.manualContent ul,.manualContent ol{padding-left:20px;margin-bottom:0}.manualSheet{max-width:720px}
+:root{--ease-out:cubic-bezier(.22,1,.36,1)}
+button,input,textarea,select{transition:transform .16s var(--ease-out),border-color .16s ease,background-color .16s ease,box-shadow .16s ease,opacity .16s ease}
+button:not(:disabled):hover{transform:translateY(-1px)}
+button:not(:disabled):active{transform:translateY(0) scale(.98)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #8ab8a0;outline-offset:2px}
+.card{animation:cardIn .38s var(--ease-out) both;will-change:transform,opacity}
+.card.state-running{border-color:#355b48;box-shadow:0 10px 34px #0005,0 0 0 1px #355b4840}
+.card.state-waiting{border-color:#5b4b2e}
+.card.state-failed{border-color:#5a292d}
+.card.state-completed{opacity:.82}
+.dot.live{animation:statusPulse 1.7s ease-in-out infinite}
+.card.state-running .cardTop{animation:runningGlow 1.7s ease-in-out infinite}
+.modal{animation:backdropIn .18s ease-out both;backdrop-filter:blur(3px)}
+.sheet{animation:sheetIn .34s var(--ease-out) both;transform-origin:bottom center}
+.processing{animation:processingIn .24s var(--ease-out) both}
+.resultPreview,.error,.ackPanel,.ruleBox,.historyItem{animation:contentIn .25s var(--ease-out) both}
+.locationOptions{animation:dropdownIn .2s var(--ease-out) both;transform-origin:top}
+.modeCards button,.starterGrid button{transition:transform .2s var(--ease-out),border-color .2s ease,background-color .2s ease,box-shadow .2s ease}
+.modeCards button:hover,.starterGrid button:hover{border-color:#3b3b43;box-shadow:0 10px 28px #0005;transform:translateY(-2px)}
+.primary:hover:not(:disabled){box-shadow:0 8px 24px #fff2}
+.secondary:hover:not(:disabled),.tabs button:hover:not(:disabled),.actions button:hover:not(:disabled){border-color:#3a3a42;background:#1a1a1e}
+.thenActionRow[draggable="true"]{cursor:grab}
+.thenActionRow[draggable="true"]:active{cursor:grabbing}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes backdropIn{from{opacity:0}to{opacity:1}}
+@keyframes sheetIn{from{opacity:0;transform:translateY(24px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes processingIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+@keyframes contentIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes dropdownIn{from{opacity:0;transform:translateY(-5px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes statusPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.58;transform:scale(.82)}}
+@keyframes runningGlow{0%,100%{opacity:1}50%{opacity:.78}}
+@media(max-width:600px){
+ .modal{padding:8px}
+ .sheet{max-height:94vh;border-radius:20px;padding:16px}
+ .card{padding:17px}
+ .card h2{font-size:19px}
+ .actions button{min-height:42px}
+ .thenRowButtons button{min-height:40px}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}
+ button:not(:disabled):hover{transform:none}
+}
