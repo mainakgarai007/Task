@@ -105,17 +105,19 @@ export function playNotificationSound(sound:"none"|"default"|"soft"|"chime"|"ale
 export async function notify(title:string,body:string,options?:any){
  try{
   const sound=options?.sound||"default";
+  const customSound=sound!=="none"&&sound!=="default";
+  const silent=sound==="none"||customSound;
   if("serviceWorker" in navigator){
    const reg=await navigator.serviceWorker.getRegistration();
-   if(reg?.showNotification){const notificationOptions:any={body,data:{taskId:options?.taskId,ackId:options?.ackId},silent:sound==="none"};if(options?.actions)notificationOptions.actions=options.actions;await reg.showNotification(title,notificationOptions);}
-   else if("Notification" in window&&Notification.permission==="granted")new Notification(title,{body,silent:sound==="none"});
+   if(reg?.showNotification){const notificationOptions:any={body,data:{taskId:options?.taskId,ackId:options?.ackId},silent};if(options?.actions)notificationOptions.actions=options.actions;await reg.showNotification(title,notificationOptions);}
+   else if("Notification" in window&&Notification.permission==="granted")new Notification(title,{body,silent});
   }else if("Notification" in window){
-   if(Notification.permission==="granted")new Notification(title,{body,silent:sound==="none"});
+   if(Notification.permission==="granted")new Notification(title,{body,silent});
    else if(Notification.permission!=="denied"){
     const p=await Notification.requestPermission();
-    if(p==="granted")new Notification(title,{body,silent:sound==="none"});
+    if(p==="granted")new Notification(title,{body,silent});
    }
   }
-  if(sound!=="none")playNotificationSound(sound);
+  if(customSound)playNotificationSound(sound);
  }catch{}
 }
