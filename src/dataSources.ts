@@ -1,4 +1,4 @@
-import type {Task} from "./types";
+import type {Task,RssItemRecord} from "./types";
 
 type ApiCacheEntry={savedAt:number;data:any};
 const API_CACHE_PREFIX="tasks-api-cache:";
