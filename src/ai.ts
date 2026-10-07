@@ -1,14 +1,14 @@
 import {Frequency,Task,ExecutionMode,ActionType,TaskAction} from "./types";
 
 export type AIProvider="openai"|"gemini"|"claude"|"openrouter"|"custom";
-export interface AISettings{provider:AIProvider;endpoint:string;apiKey:string;model:string;}
+export interface AISettings{enabled:boolean;provider:AIProvider;endpoint:string;apiKey:string;model:string;}
 export interface AIModel{id:string;name?:string;provider?:AIProvider;}
 const SETTINGS_KEY="task-tool.ai.v2";
 export const providerLabels:Record<AIProvider,string>={openai:"OpenAI",gemini:"Google Gemini",claude:"Claude",openrouter:"OpenRouter",custom:"Other / Custom"};
-export const defaultAISettings:AISettings={provider:"openrouter",endpoint:"https://openrouter.ai/api/v1/chat/completions",apiKey:"",model:""};
+export const defaultAISettings:AISettings={enabled:false,provider:"openrouter",endpoint:"https://openrouter.ai/api/v1/chat/completions",apiKey:"",model:""};
 const modelHints:Record<AIProvider,AIModel[]>={openai:[],gemini:[],claude:[],openrouter:[],custom:[]};
 
-export function loadAISettings():AISettings{try{return {...defaultAISettings,...JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}")};}catch{return defaultAISettings;}}
+export function loadAISettings():AISettings{try{const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}");return {...defaultAISettings,...saved,enabled:saved?.enabled===true};}catch{return defaultAISettings;}}
 export function saveAISettings(settings:AISettings){localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));}
 export function providerEndpoint(provider:AIProvider){
  if(provider==="openai")return "https://api.openai.com/v1/chat/completions";
