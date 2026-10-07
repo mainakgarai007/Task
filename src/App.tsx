@@ -157,7 +157,12 @@ function App(){
  const [selectedAnimeId,setSelectedAnimeId]=useState<number|undefined>(undefined);
  const [selectedAnimeSource,setSelectedAnimeSource]=useState<"anilist"|"jikan"|undefined>(undefined);
  const [manualTopicPreset,setManualTopicPreset]=useState("Custom");
- const [manualUrl,setManualUrl]=useState("");\n const [manualRssMonitor,setManualRssMonitor]=useState(false);\n const [manualRssKeywords,setManualRssKeywords]=useState("");\n const [manualRssKeywordMode,setManualRssKeywordMode]=useState<"and"|"or">("or");\n const [manualRssMaxItems,setManualRssMaxItems]=useState("20");\n const [manualRssSeenTtlDays,setManualRssSeenTtlDays]=useState("30");
+ const [manualUrl,setManualUrl]=useState("");
+ const [manualRssMonitor,setManualRssMonitor]=useState(false);
+ const [manualRssKeywords,setManualRssKeywords]=useState("");
+ const [manualRssKeywordMode,setManualRssKeywordMode]=useState<"and"|"or">("or");
+ const [manualRssMaxItems,setManualRssMaxItems]=useState("20");
+ const [manualRssSeenTtlDays,setManualRssSeenTtlDays]=useState("30");
  const [manualScope,setManualScope]=useState("all updates");
  const [manualCategory,setManualCategory]=useState("AI & tech");
  const [manualRegion,setManualRegion]=useState("India");
@@ -257,7 +262,8 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    const trackedUpdate=["new episode","new season","release date","only when changed"].includes(scope);
    const nowForCondition=new Date(finished);
    const conditionValues={result,previousResult:previous,changed,time:nowForCondition.toTimeString().slice(0,5),day:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][nowForCondition.getDay()]};
-   const rssNewItems=task.action?.rssMonitor?change.newItems:change.newItems;\n   const conditionValuesWithChange={...conditionValues,newItems:rssNewItems.join("\n"),removedItems:change.removedItems.join("\n"),updatedItems:change.updatedItems.join("\n")};
+   const rssNewItems=task.action?.rssMonitor?change.newItems:change.newItems;
+   const conditionValuesWithChange={...conditionValues,newItems:rssNewItems.join("\n"),removedItems:change.removedItems.join("\n"),updatedItems:change.updatedItems.join("\n")};
    const rules=task.action?.conditionRules?.length?task.action.conditionRules:(task.action?.conditionRule?[task.action.conditionRule]:[]);
    const conditionMatched=task.action?.conditionTree?evaluateConditionTree(task.action.conditionTree,conditionValuesWithChange):rules.length?(task.action?.conditionJoin==="any"?rules.some(rule=>evaluateCondition(rule,conditionValuesWithChange)):rules.every(rule=>evaluateCondition(rule,conditionValuesWithChange))):(!task.action?.condition||normalize(result).includes(normalize(task.action.condition)));
    const conditionThen=task.action?.conditionThen||"notify";
