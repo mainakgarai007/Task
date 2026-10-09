@@ -19,7 +19,7 @@ function extractChangeItems(value:string){
 }
 function changeItemKey(value:string){
  const line=normalizeChangeLine(value);
- const separator=line.search(/\\s+[—|]\\s+/);
+ const separator=line.search(/\s+[—|]\s+/);
  return separator>0?line.slice(0,separator).trim():line;
 }
 function detectMeaningfulChange(previous:string,current:string,detectedAt:string):TaskChange{
@@ -47,7 +47,9 @@ function detectMeaningfulChange(previous:string,current:string,detectedAt:string
  return {kind,changed:Boolean(added.length||removed.length||updated.length),newItems:added,removedItems:removed,updatedItems:updated,summary:parts.join(" · "),detectedAt};
 }
 function parseRssResultHistory(result:string,detectedAt:string):RssItemRecord[]{
- return result.split(/\n+/).map(x=>x.trim()).filter(Boolean).map(line=>{
+ const text=result.trim();
+ if(!text||text.startsWith("No new RSS/Atom items detected.")||text.startsWith("RSS monitor initialized;"))return [];
+ return text.split(/\n+/).map(x=>x.trim()).filter(line=>/^\d+[.)]\s+/.test(line)).map(line=>{
   const clean=line.replace(/^\d+[.)]\s*/,"");
   const parts=clean.split(" · ");
   const title=parts[0]||clean;

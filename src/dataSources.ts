@@ -198,7 +198,11 @@ function parseFeedItems(body:string):FeedItem[]{
  const xml=new DOMParser().parseFromString(body,"text/xml");
  if(xml.querySelector("parsererror"))throw new Error("The feed returned invalid XML.");
  const nodes=[...xml.querySelectorAll("item, entry")];
- if(!nodes.length)throw new Error("The RSS/Atom feed contains no readable items.");
+ if(!nodes.length){
+  const root=String(xml.documentElement?.localName||"").toLowerCase();
+  if(root==="rss"||root==="feed"||xml.querySelector("channel"))return [];
+  throw new Error("The URL did not return a readable RSS/Atom feed.");
+ }
  return nodes.slice(0,100).map((item,i)=>{
   const title=item.querySelector("title")?.textContent?.trim()||"Untitled item";
   const linkNode=item.querySelector("link");
@@ -219,20 +223,18 @@ export async function fetchFeedItems(url:string):Promise<FeedItem[]>{
 }
 
 function rssCacheKey(taskId:string,url:string){return "tasks-rss-seen:v2:"+taskId+":"+url.trim().toLowerCase();}
+function rssSeedKey(taskId:string,url:string){return rssCacheKey(taskId,url)+":seeded";}
 function readSeenItems(taskId:string,url:string,ttlDays:number){
- try{
-  const raw=localStorage.getItem(rssCacheKey(taskId,url));
-  const data=raw?JSON.parse(raw):{};
-  const cutoff=Date.now()-Math.max(1,ttlDays)*86400000;
-  const clean=Object.fromEntries(Object.entries(data||{}).filter(([,v]:any)=>Number(v?.detectedAt||0)>=cutoff));
-  return clean as Record<string,{detectedAt:number}>;
- }catch{return {};}
+ const raw=localStorage.getItem(rssCacheKey(taskId,url));
+ if(!raw)return {} as Record<string,{detectedAt:number}>;
+ let data:Record<string,{detectedAt:number}>={};
+ try{data=JSON.parse(raw)||{};}catch{data={};}
+ const cutoff=Date.now()-Math.max(1,ttlDays)*86400000;
+ return Object.fromEntries(Object.entries(data).filter(([,v])=>Number(v?.detectedAt||0)>=cutoff)) as Record<string,{detectedAt:number}>;
 }
 function writeSeenItems(taskId:string,url:string,seen:Record<string,{detectedAt:number}>){
- try{
-  const entries=Object.entries(seen).sort((a,b)=>b[1].detectedAt-a[1].detectedAt).slice(0,1000);
-  localStorage.setItem(rssCacheKey(taskId,url),JSON.stringify(Object.fromEntries(entries)));
- }catch{}
+ const entries=Object.entries(seen).sort((a,b)=>b[1].detectedAt-a[1].detectedAt).slice(0,1000);
+ localStorage.setItem(rssCacheKey(taskId,url),JSON.stringify(Object.fromEntries(entries)));
 }
 
 function keywordMatch(item:FeedItem,keywords:string[],mode:"and"|"or"){
@@ -250,12 +252,19 @@ export async function fetchRssNewItems(task:Task):Promise<{items:FeedItem[];hist
  const filtered=all.filter(item=>keywordMatch(item,keywords,mode));
  const seen=readSeenItems(task.id,url,task.action.rssSeenTtlDays||30);
  const now=Date.now();
- const hasSeed=Object.keys(seen).length>0;
- if(!hasSeed){for(const item of filtered)seen[item.id]={detectedAt:now};writeSeenItems(task.id,url,seen);return {items:[],history:task.action.rssHistory||[],result:"RSS monitor initialized; existing items were seeded without notification."};}
+ let hasSeed=localStorage.getItem(rssSeedKey(task.id,url))==="1";
+ if(!hasSeed&&Object.keys(seen).length>0){hasSeed=true;localStorage.setItem(rssSeedKey(task.id,url),"1");}
+ if(!hasSeed){
+  for(const item of filtered)seen[item.id]={detectedAt:now};
+  writeSeenItems(task.id,url,seen);
+  localStorage.setItem(rssSeedKey(task.id,url),"1");
+  return {items:[],history:task.action.rssHistory||[],result:"RSS monitor initialized; existing items were seeded without notification."};
+ }
  const fresh=filtered.filter(item=>!seen[item.id]);
  const limited=fresh.slice(0,Math.max(1,Math.min(50,task.action.rssMaxItems||20)));
- const records: RssItemRecord[]=limited.map(item=>({id:item.id,title:item.title,link:item.link,published:item.published,detectedAt:new Date(now).toISOString()}));
- for(const item of fresh)seen[item.id]={detectedAt:now};
+ const records:RssItemRecord[]=limited.map(item=>({id:item.id,title:item.title,link:item.link,published:item.published,detectedAt:new Date(now).toISOString()}));
+ // Only mark items returned to the caller as seen. Excess fresh items remain eligible for later runs.
+ for(const item of limited)seen[item.id]={detectedAt:now};
  writeSeenItems(task.id,url,seen);
  const history=[...(task.action.rssHistory||[]),...records].slice(-200);
  const result=limited.length

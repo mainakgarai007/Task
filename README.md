@@ -123,6 +123,9 @@ The app does not require a paid anime API key.
 - Comma-separated keyword filters with OR/AND matching
 - Configurable maximum new items per run (5–50)
 - Per-task seen-item cache with 7–365 day retention and a 1,000-item cap
+- Empty-feed seeding marker so a valid feed that starts empty can still detect its first item later
+- Unreturned items above the per-run limit remain unseen for later runs
+- Cache persistence failures surface as task errors instead of silently disabling duplicate suppression
 - Per-item history and duplicate suppression
 - New/removed/updated item conditions for IF/THEN automation
 

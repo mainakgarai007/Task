@@ -7,10 +7,9 @@ Last checked: 2026-10-09
 - Default branch: `main`
 - Live app: https://mainakgarai007.github.io/Task/
 - GitHub Actions workflow: Deploy Tasks Tool
-- Latest observed main HEAD before this checkpoint: `4493f7be57f3b5ca2dcdccd46e1aa751d150d02a` (`docs: document smart RSS monitor features`)
-- Latest successful full build/deploy before this checkpoint: run #219, commit `3e4ba5759cdb0c49aed9fe9285bab233dc837a6a`; install, Build, Upload Pages artifact, and Deploy all succeeded.
-- Run #218 for the README-only follow-up commit was cancelled by a newer run. Re-run verification on the checkpoint commit before claiming the newest HEAD has deployed.
-- Run #217 (`e8782a1`) also passed all deployment steps.
+- Previous checkpoint commit: `4835560cda21cc6b9b33a7e368ff93e9d0124247` (`docs: save RSS monitor continuation checkpoint`)
+- Previous successful full build/deploy: run #220 for the checkpoint commit; install, Build, Upload Pages artifact, and Deploy all succeeded.
+- This reliability update must be re-verified on its own latest Actions run before claiming it is deployed.
 - Several earlier RSS parser fixes failed during iteration (#211–#216); do not use those as the current status.
 
 ## Implemented Smart RSS/Atom Monitor
@@ -27,10 +26,12 @@ Last checked: 2026-10-09
 
 ## Known follow-up priorities (not yet confirmed complete)
 ### P0 — RSS reliability
-- Ensure a failed execution does not mark undelivered items as permanently seen.
-- Verify cache persistence and history across reloads.
-- Test duplicate suppression and first-run seeding.
-- Ensure sentinel messages such as “No new RSS/Atom items detected” and the first-run initialization message are never added as RSS history entries.
+- [x] Only items actually returned are marked seen; excess fresh items remain eligible for later runs.
+- [x] Valid empty RSS/Atom feeds are accepted and an independent seed marker is persisted, so later first items can be detected.
+- [x] Cache storage failures surface as task errors instead of being swallowed.
+- [x] No-new and first-run sentinel messages are excluded from per-item history.
+- [ ] Verify failed THEN-action behavior and cache/history persistence across reloads.
+- [ ] Test duplicate suppression and first-run seeding with real feeds.
 
 ### P1 — Regression coverage
 - Test valid/invalid RSS and Atom feeds.
@@ -53,3 +54,12 @@ Last checked: 2026-10-09
 - Do not claim a build or deployment passed until the latest relevant GitHub Actions run confirms it.
 - Prefer fixing RSS reliability and adding regression tests before starting unrelated feature upgrades.
 - Continue from the current repository state; do not assume the follow-up priorities above have already been implemented.
+
+
+## Latest reliability update (2026-10-09)
+- Hardened RSS cache persistence and made storage failures visible.
+- Added independent first-run seed marker, including for valid empty feeds.
+- Only items actually returned are marked seen; extra fresh items remain available to later runs.
+- Filtered first-run/no-new sentinel messages from per-item history.
+- Corrected change-item separator matching.
+- Next: add automated regression tests for parser, cache, first-run, max-items, and keyword modes; then verify notification/THEN behavior.
