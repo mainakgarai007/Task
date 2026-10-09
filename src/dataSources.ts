@@ -276,10 +276,4 @@ async function fetchWebUpdate(url:string):Promise<string>{
  const title=doc.querySelector("title")?.textContent?.trim();
  const text=(doc.body?.textContent||body).replace(/\s+/g," ").trim().slice(0,1200);
  return (title?title+"\n":"")+text;
-} const doc=new DOMParser().parseFromString(body,"text/html");
- const title=doc.querySelector("title")?.textContent?.trim();
- const text=(doc.body?.textContent||body).replace(/\s+/g," ").trim().slice(0,1200);
- return (title?title+"
-":"")+text;
 }
-
