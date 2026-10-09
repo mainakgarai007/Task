@@ -190,3 +190,14 @@ For contributors working on the source repository:
 - `npm run build` checks TypeScript and produces the production bundle.
 - `npm test` runs the automated RSS/Atom regression suite.
 - RSS changes should pass both checks and the GitHub Pages deployment workflow before being considered verified.
+
+
+## RSS notification and IF/THEN reliability
+
+Smart RSS monitors treat each successful check as newly detected items, not as a replacement of the whole feed snapshot. When no new matching items are found:
+- No RSS-specific acknowledgement notification is created.
+- RSS THEN-action chains do not run.
+- `new_items > 0` evaluates to false.
+- Removed feed entries are not treated as new-item alerts.
+
+When new items are detected, item counts and item titles/links are supplied to the IF/THEN condition evaluator. An `open_link` THEN action uses its configured URL; if no URL is configured for an RSS monitor, it falls back to the first detected item's link. Browser popup restrictions may still block automatic opening during background scheduled runs.

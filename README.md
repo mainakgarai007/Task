@@ -208,3 +208,7 @@ without requiring a paid backend.
 
 ### Public API runtime rule
 API-backed tasks use public APIs at runtime for fresh data; search and execution are not limited to hardcoded lists. When a primary public source is unavailable, supported fallback sources are used.
+
+
+### RSS alert correctness
+Smart RSS checks evaluate conditions against newly detected item records. Empty checks do not run RSS THEN chains or create RSS-specific acknowledgement notifications. Numeric item-count conditions such as `new_items > 0` are covered by automated regression tests.

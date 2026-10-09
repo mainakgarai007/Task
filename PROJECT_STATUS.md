@@ -109,3 +109,12 @@ Do not start a large unrelated feature until the reliability and test gates abov
 - CI order: Install dependencies → Run regression tests → Build → Upload Pages artifact → Deploy.
 - Confirmed cases: RSS item parsing, Atom entry parsing, malformed XML/non-feed rejection, valid empty feed, URL validation, first-run seeding, duplicate suppression, later first-item detection, max-items paging, AND/OR keyword matching, network failure, cache write failure.
 - Remaining test expansion: reordered/deleted feed items, cache/history across reloads, and notification/THEN-action behavior.
+
+
+## P2 outcome — notification and IF/THEN correctness
+- RSS checks now build change state from newly detected item records rather than comparing the latest result text to the previous check.
+- Empty RSS checks do not create RSS-specific acknowledgement notifications or execute RSS THEN-action chains.
+- `new_items > 0` and numeric item-count operators have automated tests, including nested AND/OR/NOT groups.
+- RSS `open_link` uses an explicit configured URL, or falls back to the first new item's link when no URL is configured.
+- Browser popup blockers may prevent opening a link during background scheduled execution.
+- Pending verification: new tests, production build and Pages deployment in GitHub Actions.

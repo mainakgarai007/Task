@@ -256,7 +256,14 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
   const started=new Date().toISOString();
   try{
    const result=mode==="direct"?await executeDirectTask(task):await executeTaskWithAI(task,ai);
-   const finished=new Date().toISOString(),change=detectMeaningfulChange(task.lastResult||"",result,finished),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result,change};
+   const finished=new Date().toISOString();
+   let change=detectMeaningfulChange(task.lastResult||"",result,finished);
+   const rssRecords=task.action?.rssMonitor?parseRssResultHistory(result,finished):[];
+   if(task.action?.rssMonitor){
+    const itemLines=rssRecords.map(item=>item.title+(item.link?" · "+item.link:""));
+    change={kind:itemLines.length?"new_items":"none",changed:itemLines.length>0,newItems:itemLines,removedItems:[],updatedItems:[],summary:itemLines.length?"New RSS items: "+itemLines.slice(0,5).join(" | "):"No new RSS items detected.",detectedAt:finished};
+   }
+   const record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"success",result,change};
    const normalize=(value:string)=>value.toLowerCase().replace(/\s+/g," ").trim();
    const previous=task.lastResult||"";
    const changed=change.changed;
@@ -264,7 +271,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    const trackedUpdate=["new episode","new season","release date","only when changed"].includes(scope);
    const nowForCondition=new Date(finished);
    const conditionValues={result,previousResult:previous,changed,time:nowForCondition.toTimeString().slice(0,5),day:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][nowForCondition.getDay()]};
-   const rssNewItems=task.action?.rssMonitor?change.newItems:change.newItems;
+   const rssNewItems=change.newItems;
    const conditionValuesWithChange={...conditionValues,newItems:rssNewItems.join("\n"),removedItems:change.removedItems.join("\n"),updatedItems:change.updatedItems.join("\n")};
    const rules=task.action?.conditionRules?.length?task.action.conditionRules:(task.action?.conditionRule?[task.action.conditionRule]:[]);
    const conditionMatched=task.action?.conditionTree?evaluateConditionTree(task.action.conditionTree,conditionValuesWithChange):rules.length?(task.action?.conditionJoin==="any"?rules.some(rule=>evaluateCondition(rule,conditionValuesWithChange)):rules.every(rule=>evaluateCondition(rule,conditionValuesWithChange))):(!task.action?.condition||normalize(result).includes(normalize(task.action.condition)));
@@ -273,7 +280,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    const conditionOk=conditionMatched&&(conditionThen==="notify"||conditionThen==="notify_and_stop"||conditionThen==="sound"||conditionThen==="create_task"||conditionThen==="wait");
    const stopHit=(conditionMatched&&(conditionThen==="stop"||conditionThen==="notify_and_stop"))||(task.action?.stopConditionRule?evaluateCondition(task.action.stopConditionRule,conditionValuesWithChange):Boolean(task.action?.stopCondition&&normalize(result).includes(normalize(task.action.stopCondition))));
    const terminalAfterExecution=task.frequency==="once" || stopHit || Boolean(task.schedule?.maxRuns && task.runCount+1>=task.schedule.maxRuns) || Boolean(task.schedule?.endDate && new Date(finished).toISOString().slice(0,10)>task.schedule.endDate);
-   const requiresAcknowledgement=task.notificationMode==="see"||task.notificationMode==="completed";
+   const requiresAcknowledgement=(task.notificationMode==="see"||task.notificationMode==="completed")&&(!task.action?.rssMonitor||change.changed);
    const completed=terminalAfterExecution&&!requiresAcknowledgement;
    const executionEnded=completed||(requiresAcknowledgement&&terminalAfterExecution&&task.notificationMode==="see");
    const recurringNext=manual&&task.frequency!=="once"?(()=>{let candidate=new Date(task.nextRun),guard=0;while(candidate.getTime()<=Date.now()&&guard++<1000)candidate=new Date(nextRun(candidate,task.frequency,task.schedule));return candidate.toISOString();})():nextRun(new Date(),task.frequency,task.schedule);
@@ -285,11 +292,11 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    // IF/THEN chains own their notifications, so avoid duplicate alerts there.
    const ruleConfigured=Boolean(task.action?.conditionTree||rules.length||task.action?.condition||task.action?.thenActions?.length);
    const changeAllowed=!task.action?.notifyOnChange||changed;
-   const trackedAllowed=!trackedUpdate||(task.runCount===0||changed);
+   const trackedAllowed=task.action?.rssMonitor?changed:(!trackedUpdate||(task.runCount===0||changed));
    if(!acknowledgement&&task.notificationMode==="disable"&&!ruleConfigured&&changeAllowed&&trackedAllowed){
     await notify("Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+result.slice(0,300),{taskId:id,sound:task.action?.notificationSound||"default"});
    }
-   if(conditionOk && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))){
+   if(conditionOk && (!task.action?.rssMonitor || change.changed) && (!trackedUpdate ? (!task.action?.notifyOnChange || changed) : (task.runCount===0 || changed))){
     let chain:TaskThenAction[]=task.action?.thenActions?.length?task.action.thenActions:[];
     if(!chain.length){if(conditionThen==="notify_and_stop")chain=[{type:"notify"},{type:"stop"}];else if(conditionThen==="wait")chain=[{type:"wait",minutes:conditionWaitMinutes}];else if(conditionThen==="notify"||conditionThen==="sound"||conditionThen==="create_task")chain=[{type:conditionThen}];}
     for(const rawStep of chain){
@@ -301,7 +308,8 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
       const ms=Math.max(100,Number(step.seconds||0)*1000+Number(step.minutes||0)*60000);
       await new Promise(resolve=>setTimeout(resolve,ms));
      } else if(step.type==="open_link"){
-      if(step.url?.trim()) window.open(step.url.trim(),"_blank","noopener,noreferrer");
+      const target=step.url?.trim()||(task.action?.rssMonitor?rssRecords[0]?.link:"");
+      if(target) window.open(target,"_blank","noopener,noreferrer");
      } else if(step.type==="create_task"){
       if(aiReady){try{const follow=await createTaskWithAI("Create the next relevant follow-up task based on this completed automation. Use this result as context and schedule it appropriately. Result: "+result,ai);const next=parsedTaskToTask(follow,uid);setTasks(ts=>[next,...ts]);await notify("Follow-up task created",next.title);}catch(e){await notify("Follow-up task failed",e instanceof Error?e.message:"Could not create follow-up task.");}}else await notify("AI required","Add AI settings to create follow-up tasks automatically.");
      } else if(step.type==="save_result"){
