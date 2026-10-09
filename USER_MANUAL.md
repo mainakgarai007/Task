@@ -22,15 +22,15 @@ Use **Preview sound** while creating/editing a task. The selected sound ID is sa
 Weather supports Indian city/town search and saved or automatic device location. Anime supports title/topic monitoring and update scopes. News and Movies support topic, language and region. Web/RSS tasks accept a public URL or feed.
 
 ### RSS / Atom monitoring
-For a Web task, enter a public RSS or Atom feed URL.
+For a Web task, enter a public RSS or Atom feed URL. You can choose either ordinary URL-change monitoring or **Smart RSS/Atom new-item monitor**.
 
-Each check extracts up to 20 latest readable items with:
-- title
-- source (when provided)
-- published/updated date (when provided)
-- item link (when provided)
+Smart monitor options:
+- **Keywords:** comma-separated terms; leave blank to accept all items.
+- **Keyword mode:** OR matches any keyword; AND requires all keywords (up to 8 for AND mode).
+- **Max new items:** limit the number returned per run (5–50).
+- **Seen cache retention:** keep per-item IDs for 7–365 days to suppress duplicates.
 
-The result is passed through the app's meaningful change detector. This means unchanged feeds do not trigger a change notification, while newly appearing items can be surfaced as new content.
+Each feed check parses item IDs, titles, links, publication dates and available descriptions. The first successful check seeds existing matching items without notifying about the entire backlog. Later checks return only unseen matching items, save a per-task item history, and cap/expire the seen cache to limit storage. This works with public RSS/Atom feeds; a feed that blocks browser requests may need a CORS-friendly public feed URL.
 
 Example:
 
