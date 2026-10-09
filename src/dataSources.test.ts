@@ -73,6 +73,22 @@ describe("RSS monitor reliability",()=>{
   mockFeed(seed);await fetchRssNewItems(andTask);mockFeed(body);
   expect((await fetchRssNewItems(andTask)).items.map(x=>x.id)).toEqual(["both"]);
  });
+ it("does not report deleted or reordered entries as new items",async()=>{
+  const t=task();
+  mockFeed(rss([rssItem("a","Episode A","https://example.test/a"),rssItem("b","Episode B","https://example.test/b")]));
+  await fetchRssNewItems(t);
+  mockFeed(rss([rssItem("b","Episode B","https://example.test/b"),rssItem("c","Episode C","https://example.test/c")]));
+  expect((await fetchRssNewItems(t)).items.map(x=>x.id)).toEqual(["c"]);
+ });
+ it("keeps seen-item suppression across a simulated task reload",async()=>{
+  const first=task();
+  mockFeed(rss([rssItem("seed","Seed","https://example.test/seed")]));
+  await fetchRssNewItems(first);
+  mockFeed(rss([rssItem("seed","Seed","https://example.test/seed"),rssItem("new","New item","https://example.test/new")]));
+  expect((await fetchRssNewItems(first)).items.map(x=>x.id)).toEqual(["new"]);
+  const reloaded=task();
+  expect((await fetchRssNewItems(reloaded)).items).toEqual([]);
+ });
  it("surfaces network failures",async()=>{
   vi.stubGlobal("fetch",vi.fn(async()=>{throw new Error("offline");}));
   await expect(fetchRssNewItems(task())).rejects.toThrow(/fetch the feed/i);

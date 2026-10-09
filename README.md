@@ -135,7 +135,7 @@ The app does not require a paid anime API key.
 - Empty-feed seeding marker so a valid feed that starts empty can still detect its first item later
 - Unreturned items above the per-run limit remain unseen for later runs
 - Cache persistence failures surface as task errors instead of silently disabling duplicate suppression
-- Per-item history and duplicate suppression
+- Per-item history is visible in the task History view (title, detected time, publication date and link), alongside duplicate suppression
 - New/removed/updated item conditions for IF/THEN automation
 
 ### 🔔 Notifications
