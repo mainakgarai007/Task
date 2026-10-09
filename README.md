@@ -118,11 +118,13 @@ The app does not require a paid anime API key.
 
 ### 🌐 Web / RSS
 - Public URL monitoring
-- RSS/Atom feed parsing with title, source, date and link extraction
-- Up to 20 latest feed items retained per check
-- New-item detection through the change-detection engine
-- Duplicate unchanged feed results are suppressed
-- Conditions and stop rules
+- RSS/Atom feed parsing (item ID, title, link, publication date and description)
+- Smart new-item monitoring with first-run seeding to avoid backlog spam
+- Comma-separated keyword filters with OR/AND matching
+- Configurable maximum new items per run (5–50)
+- Per-task seen-item cache with 7–365 day retention and a 1,000-item cap
+- Per-item history and duplicate suppression
+- New/removed/updated item conditions for IF/THEN automation
 
 ### 🔔 Notifications
 - Browser/service-worker notifications
