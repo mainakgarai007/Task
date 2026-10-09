@@ -7,9 +7,10 @@ Last checked: 2026-10-09
 - Default branch: `main`
 - Live app: https://mainakgarai007.github.io/Task/
 - GitHub Actions workflow: Deploy Tasks Tool
-- Previous checkpoint commit: `4835560cda21cc6b9b33a7e368ff93e9d0124247` (`docs: save RSS monitor continuation checkpoint`)
-- Previous successful full build/deploy: run #220 for the checkpoint commit; install, Build, Upload Pages artifact, and Deploy all succeeded.
-- This reliability update must be re-verified on its own latest Actions run before claiming it is deployed.
+- Latest code commit: `755889bf25b2700247779e77828e9bf80cb47596` (`fix: harden RSS seen-item reliability`)
+- Latest confirmed successful full build/deploy: run #221 for commit `755889b`.
+- Run #221 verified Install dependencies, Build, Upload Pages artifact, and Deploy as successful.
+- The next documentation-only roadmap update must also be verified before claiming the newest HEAD is deployed.
 - Several earlier RSS parser fixes failed during iteration (#211–#216); do not use those as the current status.
 
 ## Implemented Smart RSS/Atom Monitor
@@ -63,3 +64,32 @@ Last checked: 2026-10-09
 - Filtered first-run/no-new sentinel messages from per-item history.
 - Corrected change-item separator matching.
 - Next: add automated regression tests for parser, cache, first-run, max-items, and keyword modes; then verify notification/THEN behavior.
+
+
+## Earlier roadmap captured from project notes/screenshots
+
+### Existing foundations (implemented; continue auditing)
+- [x] V1 base app: task creation/management, browser notifications, GitHub Pages deployment.
+- [x] V2 foundations: conditions, stop conditions, previous-run state, state comparison/change detection, recurring schedules, task editing and execution history.
+- [x] Full IF/THEN condition builder foundations: multiple conditions, AND/OR groups, nested groups, NOT, and THEN action chains.
+- [x] V3 foundations: public API tasks, URL monitoring, RSS monitoring, web change detection.
+- [x] V4 optional AI foundations: user-supplied API key/provider settings, OpenAI-compatible endpoint, Gemini-compatible provider path, OpenRouter-compatible endpoint, natural-language task creation and AI result processing.
+- [x] History and JSON backup/import controls exist; robustness and migration validation still need more tests.
+- [x] Smart RSS/Atom item-level monitor exists; reliability hardening has just been deployed.
+
+### Remaining roadmap (not yet complete)
+1. **P1 — Automated regression tests:** RSS/Atom parsing, empty feed, malformed feed, cache persistence, first-run seeding, duplicate suppression, max-items paging, keyword AND/OR, and network/storage failure cases. Add a dedicated test command/CI step.
+2. **P2 — Notification correctness:** verify no-new runs do not notify, new_items > 0 conditions behave correctly, and THEN action chains handle errors and item links predictably.
+3. **P2 — Real change-diff/history UI:** show item-level additions/removals/updates and readable RSS history instead of only a result summary.
+4. **P2 — Import validation/migration:** validate imported JSON shape, preserve valid older task data, and provide safe migration/error reporting.
+5. **P2 — File/CSV/JSON task processing:** parsing, validation, transformation, and saved output.
+6. **P3 — More schedule intervals:** support seconds/hours/days/months as distinct interval units where practical; current custom interval is minute-based.
+7. **P3 — Webhook/event triggers:** generic webhook trigger plus GitHub and Gmail event integrations. These require an appropriate receiving/backend or native architecture; a static GitHub Pages browser alone cannot reliably receive server-side events.
+8. **P3 — Offline queue and retry:** bounded retry/backoff, idempotency, and visible queued/failed state.
+9. **P3 — Android app layer:** Capacitor/native notifications, background scheduling, and APK/PWA install experience. Browser-only GitHub Pages execution cannot be guaranteed while the browser/device is fully closed.
+10. **P4 — Further provider polish:** verify Gemini/OpenRouter/OpenAI-compatible providers and AI result handling through regression tests; do not assume every provider/model is compatible merely because a settings option exists.
+
+### Recommended order
+RSS reliability (deployed) → regression tests → notification/THEN correctness → history/diff UI → import validation → file processing → offline retries/webhooks → broader intervals → Capacitor Android scheduler.
+
+Do not start a large unrelated feature until the reliability and test gates above are satisfied. Treat the checklist as a roadmap, not a claim that unchecked work is implemented.
