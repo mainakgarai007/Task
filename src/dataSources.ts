@@ -205,7 +205,7 @@ function parseFeedItems(body:string):FeedItem[]{
   const link=linkNode?.getAttribute("href")||linkNode?.textContent?.trim()||"";
   const published=item.querySelector("pubDate, published, updated, date")?.textContent?.trim()||"";
   const source=item.querySelector("source")?.textContent?.trim()||"";
-  const description=item.querySelector("description, summary, content")?.textContent?.replace(/<[^>]+>/g," ").replace(/\\s+/g," ").trim()||"";
+  const description=item.querySelector("description, summary, content")?.textContent?.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()||"";
   const guid=item.querySelector("guid, id")?.textContent?.trim()||"";
   const id=guid||link||title+"|"+published||String(i);
   return {id,title,link,published,source,description};
@@ -214,7 +214,7 @@ function parseFeedItems(body:string):FeedItem[]{
 
 export async function fetchFeedItems(url:string):Promise<FeedItem[]>{
  const target=url.trim();
- if(!/^https?:\\/\\//i.test(target))throw new Error("Enter a valid http/https RSS/Atom URL.");
+ if(!/^https?:\/\//i.test(target))throw new Error("Enter a valid http/https RSS/Atom URL.");
  return parseFeedItems(await fetchFeedBody(target));
 }
 
@@ -259,22 +259,25 @@ export async function fetchRssNewItems(task:Task):Promise<{items:FeedItem[];hist
  writeSeenItems(task.id,url,seen);
  const history=[...(task.action.rssHistory||[]),...records].slice(-200);
  const result=limited.length
-  ? limited.map((x,i)=>`${i+1}. ${x.title}${x.published?" · "+x.published:""}${x.link?" · "+x.link:""}`).join("\\n")
+  ? limited.map((x,i)=>`${i+1}. ${x.title}${x.published?" · "+x.published:""}${x.link?" · "+x.link:""}`).join("
+")
   : "No new RSS/Atom items detected.";
  return {items:limited,history,result};
 }
 
 async function fetchWebUpdate(url:string):Promise<string>{
  const target=url.trim();
- if(!/^https?:\\/\\//i.test(target))throw new Error("Enter a valid http/https URL.");
+ if(!/^https?:\/\//i.test(target))throw new Error("Enter a valid http/https URL.");
  const body=await fetchFeedBody(target);
- const looksLikeRss=/<(?:rss|feed)\\b/i.test(body)||/<(?:item|entry)\\b/i.test(body)||/\\.(?:xml|rss)(?:[?#]|$)/i.test(target)||/\\/feed(?:[./?#]|$)/i.test(target);
+ const looksLikeRss=/<(?:rss|feed)\b/i.test(body)||/<(?:item|entry)\b/i.test(body)||/\.(?:xml|rss)(?:[?#]|$)/i.test(target)||/\/feed(?:[./?#]|$)/i.test(target);
  if(looksLikeRss){
-  return parseFeedItems(body).slice(0,20).map((x,i)=>(i+1)+". "+x.title+(x.source?" — "+x.source:"")+(x.published?" · "+x.published:"")+(x.link?" · "+x.link:"")).join("\\n");
+  return parseFeedItems(body).slice(0,20).map((x,i)=>(i+1)+". "+x.title+(x.source?" — "+x.source:"")+(x.published?" · "+x.published:"")+(x.link?" · "+x.link:"")).join("
+");
  }
  const doc=new DOMParser().parseFromString(body,"text/html");
  const title=doc.querySelector("title")?.textContent?.trim();
- const text=(doc.body?.textContent||body).replace(/\\s+/g," ").trim().slice(0,1200);
- return (title?title+"\\n":"")+text;
+ const text=(doc.body?.textContent||body).replace(/\s+/g," ").trim().slice(0,1200);
+ return (title?title+"
+":"")+text;
 }
 
