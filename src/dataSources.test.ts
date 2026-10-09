@@ -69,6 +69,7 @@ describe("RSS monitor reliability",()=>{
   mockFeed(seed);await fetchRssNewItems(orTask);mockFeed(body);
   expect((await fetchRssNewItems(orTask)).items.map(x=>x.id)).toEqual(["both","one","other"]);
   const andTask=task({rssKeywords:["Black Torch","Hindi dub"],rssKeywordMode:"and"});
+  andTask.id="rss-and-task";
   mockFeed(seed);await fetchRssNewItems(andTask);mockFeed(body);
   expect((await fetchRssNewItems(andTask)).items.map(x=>x.id)).toEqual(["both"]);
  });
@@ -78,7 +79,7 @@ describe("RSS monitor reliability",()=>{
  });
  it("surfaces cache storage failures",async()=>{
   mockFeed(rss([rssItem("seed","Seed","https://example.test/seed")]));
-  vi.spyOn(Storage.prototype,"setItem").mockImplementation(()=>{throw new Error("quota exceeded");});
+  vi.spyOn(localStorage,"setItem").mockImplementation(()=>{throw new Error("quota exceeded");});
   await expect(fetchRssNewItems(task())).rejects.toThrow(/quota exceeded/);
  });
 });
