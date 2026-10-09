@@ -141,7 +141,7 @@ Task history records executions and acknowledgements. Tasks can be edited, pause
 Open **⚙ AI** to configure the provider, API key and model. Direct public-data tasks can run without AI at execution time.
 
 ## Backup
-Use JSON export/import to back up and restore task data.
+Export creates a versioned JSON backup. Import validates the format, supports legacy array backups, previews valid/invalid task counts, and asks for confirmation before replacing your current task list. Invalid files and backups with zero valid tasks are rejected without changing existing tasks.
 
 ## Browser limitations
 The GitHub Pages/browser version cannot guarantee execution while the browser/device is completely closed or offline. Browser notification permission and browser security can also affect notifications and actions. Native Android background scheduling is planned.
@@ -201,3 +201,8 @@ Smart RSS monitors treat each successful check as newly detected items, not as a
 - Removed feed entries are not treated as new-item alerts.
 
 When new items are detected, item counts and item titles/links are supplied to the IF/THEN condition evaluator. An `open_link` THEN action uses its configured URL; if no URL is configured for an RSS monitor, it falls back to the first detected item's link. Browser popup restrictions may still block automatic opening during background scheduled runs.
+
+
+## Backup format and safe restore
+
+New exports use a versioned `tasks-backup` JSON envelope. Older plain-array backups are supported and normalized. Import previews the valid/invalid record counts and requires confirmation before replacement. Invalid JSON, unsupported versions, wrong structures, and backups with no valid tasks are rejected; current tasks remain unchanged. If a backup contains mixed valid and invalid records, the app reports skipped records and only restores after confirmation. Restore replaces the current list rather than merging it.

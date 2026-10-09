@@ -29,7 +29,7 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Running / waiting execution state with a clear waiting reason
 - Execution history and error logs
 - Previous-result memory
-- JSON backup export/import
+- Versioned JSON backup export/import with validation and non-destructive import preview
 
 ### Scheduling
 - One-time tasks
@@ -212,3 +212,12 @@ API-backed tasks use public APIs at runtime for fresh data; search and execution
 
 ### RSS alert correctness
 Smart RSS checks evaluate conditions against newly detected item records. Empty checks do not run RSS THEN chains or create RSS-specific acknowledgement notifications. Numeric item-count conditions such as `new_items > 0` are covered by automated regression tests.
+
+
+### Backup validation and migration
+
+- New exports use a versioned JSON envelope (`format: "tasks-backup", version: 1`) with an export timestamp and task list.
+- Legacy array-only backups remain supported and normalized during import.
+- Import previews valid/invalid task counts and requires confirmation before replacing current tasks.
+- Invalid JSON, unsupported versions, wrong top-level shapes, and backups with no valid tasks are rejected without changing existing tasks.
+- Partially valid backups can be restored only after the preview makes skipped records explicit. Confirmed restore replaces the list rather than merging.
