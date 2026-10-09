@@ -184,7 +184,7 @@ export async function fetchNews(topic:string,language="en"):Promise<string>{
  return fetchRss(topic,language);
 }
 
-export export interface FeedItem{id:string;title:string;link:string;published?:string;source?:string;description?:string;}
+export interface FeedItem{id:string;title:string;link:string;published?:string;source?:string;description?:string;}
 
 async function fetchFeedBody(target:string):Promise<string>{
  const urls=[target,"https://api.allorigins.win/raw?url="+encodeURIComponent(target)];
@@ -276,4 +276,32 @@ async function fetchWebUpdate(url:string):Promise<string>{
  const title=doc.querySelector("title")?.textContent?.trim();
  const text=(doc.body?.textContent||body).replace(/\s+/g," ").trim().slice(0,1200);
  return (title?title+"\n":"")+text;
+}
+
+
+export async function executeDirectTask(task:Task):Promise<string>{
+ const a=task.action;
+ if(!a)return task.prompt;
+ if(a.type==="reminder")return a.message||task.prompt;
+ if(a.type==="weather"){
+  if(a.locationMode==="auto-live"){
+   const live=await resolveAutoWeatherLocation("auto-live");
+   return await fetchWeather(live.label,{latitude:live.latitude,longitude:live.longitude});
+  }
+  return await fetchWeather(a.location||"Current location",{latitude:a.latitude,longitude:a.longitude});
+ }
+ if(a.type==="anime")return await fetchAnime(a.topic||task.prompt,a.language||"en",a.scope||"all updates",a.animeId,a.animeSource);
+ if(a.type==="news"||a.type==="movie"){
+  const prefix=a.type==="movie"?"movie ":"";
+  const scope=a.scope?" "+a.scope:"";
+  return await fetchNews(prefix+(a.topic||task.prompt)+scope,a.language||"en");
+ }
+ if(a.type==="web"){
+  if(a.rssMonitor){
+   const monitored=await fetchRssNewItems(task);
+   return monitored.result;
+  }
+  return await fetchWebUpdate(a.url||"");
+ }
+ return task.prompt;
 }
