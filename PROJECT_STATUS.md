@@ -7,10 +7,10 @@ Last checked: 2026-10-09
 - Default branch: `main`
 - Live app: https://mainakgarai007.github.io/Task/
 - GitHub Actions workflow: Deploy Tasks Tool
-- Latest code commit: `755889bf25b2700247779e77828e9bf80cb47596` (`fix: harden RSS seen-item reliability`)
-- Latest confirmed successful full build/deploy: run #221 for commit `755889b`.
-- Run #221 verified Install dependencies, Build, Upload Pages artifact, and Deploy as successful.
-- The next documentation-only roadmap update must also be verified before claiming the newest HEAD is deployed.
+- Latest verified code commit: `4f4a9fb6eb25bf9e50a20f17b6c522a24d0e662e` (`test: fix RSS regression test isolation`).
+- Latest confirmed successful test/build/deploy: run #224.
+- Run #224 verified Install dependencies, Run regression tests, Build, Upload Pages artifact, and Deploy as successful.
+- RSS regression suite: 11 tests passed. Run #223 initially caught two test-fixture issues; those were corrected and #224 passed.
 - Several earlier RSS parser fixes failed during iteration (#211–#216); do not use those as the current status.
 
 ## Implemented Smart RSS/Atom Monitor
@@ -101,3 +101,11 @@ Do not start a large unrelated feature until the reliability and test gates abov
 - Added a dedicated automated RSS/Atom test suite using Vitest and happy-dom.
 - CI runs tests before the production build/deploy gate; a test failure fails the workflow.
 - Coverage includes RSS/Atom parsing, malformed XML, valid empty feeds, later first-item detection, duplicate suppression, max-items paging, keyword AND/OR, network failure, and cache-write failure.
+
+
+## P1 outcome — automated RSS regression tests
+- Latest passing test/build/deploy run: #224, commit `4f4a9fb6eb25bf9e50a20f17b6c522a24d0e662e`.
+- Test command: `npm test` (Vitest + happy-dom).
+- CI order: Install dependencies → Run regression tests → Build → Upload Pages artifact → Deploy.
+- Confirmed cases: RSS item parsing, Atom entry parsing, malformed XML/non-feed rejection, valid empty feed, URL validation, first-run seeding, duplicate suppression, later first-item detection, max-items paging, AND/OR keyword matching, network failure, cache write failure.
+- Remaining test expansion: reordered/deleted feed items, cache/history across reloads, and notification/THEN-action behavior.
