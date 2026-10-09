@@ -8,6 +8,15 @@ Live app: https://mainakgarai007.github.io/Task/
 
 The live app includes an in-app **? User Manual** button in the header. It explains task creation, scheduling, Weather location modes, Anime monitoring, smart rules, AI, backups, notifications and current browser limitations. **Update rule: whenever a feature or workflow changes, the in-app manual, `USER_MANUAL.md` and this README should be updated together.**
 
+## Development and regression tests
+
+- Install dependencies with `npm install`.
+- Run the production TypeScript/Vite build with `npm run build`.
+- Run automated RSS/Atom regression tests with `npm test`.
+- Use `npm run test:watch` while iterating locally.
+
+The RSS test suite covers RSS/Atom parsing, malformed responses, first-run seeding (including empty feeds), duplicate suppression, item-limit paging, keyword AND/OR matching, network failures and cache-storage failures. GitHub Actions runs the tests before the production build/deploy gate.
+
 ## What it does
 
 Create scheduled tasks manually or with AI. Tasks are stored locally in the browser and can run direct public-data actions without an AI call when possible.

@@ -182,3 +182,11 @@ Open link
 ```
 
 Whenever a workflow changes, update this file, the in-app manual and README together.
+
+
+## Developer regression checks
+
+For contributors working on the source repository:
+- `npm run build` checks TypeScript and produces the production bundle.
+- `npm test` runs the automated RSS/Atom regression suite.
+- RSS changes should pass both checks and the GitHub Pages deployment workflow before being considered verified.

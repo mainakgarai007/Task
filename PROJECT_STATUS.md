@@ -35,10 +35,12 @@ Last checked: 2026-10-09
 - [ ] Test duplicate suppression and first-run seeding with real feeds.
 
 ### P1 — Regression coverage
-- Test valid/invalid RSS and Atom feeds.
-- Test duplicate, reordered, deleted, and newly published items.
-- Test AND/OR keyword filters, empty feeds, and network failures.
-- Verify every code change with GitHub Actions Build and Deploy status.
+- [x] Added Vitest + happy-dom tests for RSS/Atom parsing, empty-feed seeding, duplicate suppression, max-item paging, AND/OR keywords, network failures and cache-write failures.
+- [x] Added `npm test` and `npm run test:watch` scripts.
+- [x] Added a GitHub Actions regression-test step before the production build.
+- [ ] Confirm the new test suite and production build pass in GitHub Actions.
+- [ ] Expand coverage for reordered/deleted feed items and verify notification/THEN behavior.
+- [ ] Verify each code change with GitHub Actions test, build and deploy status.
 
 ### P2 — Notification correctness
 - No unnecessary notification when there are no new items.
@@ -93,3 +95,9 @@ Last checked: 2026-10-09
 RSS reliability (deployed) → regression tests → notification/THEN correctness → history/diff UI → import validation → file processing → offline retries/webhooks → broader intervals → Capacitor Android scheduler.
 
 Do not start a large unrelated feature until the reliability and test gates above are satisfied. Treat the checklist as a roadmap, not a claim that unchecked work is implemented.
+
+
+## P1 regression test implementation (2026-10-09)
+- Added a dedicated automated RSS/Atom test suite using Vitest and happy-dom.
+- CI runs tests before the production build/deploy gate; a test failure fails the workflow.
+- Coverage includes RSS/Atom parsing, malformed XML, valid empty feeds, later first-item detection, duplicate suppression, max-items paging, keyword AND/OR, network failure, and cache-write failure.
