@@ -259,8 +259,7 @@ export async function fetchRssNewItems(task:Task):Promise<{items:FeedItem[];hist
  writeSeenItems(task.id,url,seen);
  const history=[...(task.action.rssHistory||[]),...records].slice(-200);
  const result=limited.length
-  ? limited.map((x,i)=>`${i+1}. ${x.title}${x.published?" · "+x.published:""}${x.link?" · "+x.link:""}`).join("
-")
+  ? limited.map((x,i)=>`${i+1}. ${x.title}${x.published?" · "+x.published:""}${x.link?" · "+x.link:""}`).join("\n")
   : "No new RSS/Atom items detected.";
  return {items:limited,history,result};
 }
@@ -271,8 +270,7 @@ async function fetchWebUpdate(url:string):Promise<string>{
  const body=await fetchFeedBody(target);
  const looksLikeRss=/<(?:rss|feed)\b/i.test(body)||/<(?:item|entry)\b/i.test(body)||/\.(?:xml|rss)(?:[?#]|$)/i.test(target)||/\/feed(?:[./?#]|$)/i.test(target);
  if(looksLikeRss){
-  return parseFeedItems(body).slice(0,20).map((x,i)=>(i+1)+". "+x.title+(x.source?" — "+x.source:"")+(x.published?" · "+x.published:"")+(x.link?" · "+x.link:"")).join("
-");
+  return parseFeedItems(body).slice(0,20).map((x,i)=>(i+1)+". "+x.title+(x.source?" — "+x.source:"")+(x.published?" · "+x.published:"")+(x.link?" · "+x.link:"")).join("\n");
  }
  const doc=new DOMParser().parseFromString(body,"text/html");
  const title=doc.querySelector("title")?.textContent?.trim();
