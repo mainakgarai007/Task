@@ -26,7 +26,7 @@ export interface TaskAction{
 }
 export type ChangeKind="none"|"new_items"|"removed_items"|"updated"|"mixed";
 export interface TaskChange{kind:ChangeKind;changed:boolean;newItems:string[];removedItems:string[];updatedItems:string[];summary:string;detectedAt:string;}
-export interface ExecutionRecord{id:string;startedAt:string;finishedAt:string;status:"success"|"failed";result?:string;error?:string;change?:TaskChange;}
+export interface ExecutionRecord{id:string;startedAt:string;finishedAt:string;status:"success"|"failed"|"skipped";result?:string;error?:string;change?:TaskChange;}
 export interface Task{
  id:string;title:string;prompt:string;frequency:Frequency;nextRun:string;enabled:boolean;status:TaskStatus;createdAt:string;lastRun?:string;runCount:number;history:string[];executions?:ExecutionRecord[];lastResult?:string;previousResult?:string;lastError?:string;lastChange?:TaskChange;executionMode:ExecutionMode;action:TaskAction;schedule?:TaskSchedule;executionState?:ExecutionState;waitingReason?:string;notificationMode?:NotificationMode;remindIfNotCompletedMinutes?:number;pendingAcknowledgement?:TaskAcknowledgement;acknowledgements?:TaskAcknowledgement[];sequence?:TaskSequence;
 }

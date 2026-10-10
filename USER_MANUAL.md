@@ -206,3 +206,10 @@ When new items are detected, item counts and item titles/links are supplied to t
 ## Backup format and safe restore
 
 New exports use a versioned `tasks-backup` JSON envelope. Older plain-array backups are supported and normalized. Import previews the valid/invalid record counts and requires confirmation before replacement. Invalid JSON, unsupported versions, wrong structures, and backups with no valid tasks are rejected; current tasks remain unchanged. If a backup contains mixed valid and invalid records, the app reports skipped records and only restores after confirmation. Restore replaces the current list rather than merging it.
+
+
+## Execution reliability and recovery
+
+The scheduler uses a per-task lock to prevent overlapping executions of the same task in one open app session. If a duplicate trigger arrives while the task is already running, the duplicate is recorded as **Skipped** in **History**. This does not cancel the execution already in progress.
+
+If the page reloads, a saved `running` state is recovered to `idle` because the in-memory execution cannot survive a reload. Tasks waiting for a known prerequisite keep their waiting reason. Check **History** for successful, failed, and skipped execution entries. The browser app cannot run scheduled work while the browser is fully closed or the device is offline.

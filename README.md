@@ -221,3 +221,10 @@ Smart RSS checks evaluate conditions against newly detected item records. Empty 
 - Import previews valid/invalid task counts and requires confirmation before replacing current tasks.
 - Invalid JSON, unsupported versions, wrong top-level shapes, and backups with no valid tasks are rejected without changing existing tasks.
 - Partially valid backups can be restored only after the preview makes skipped records explicit. Confirmed restore replaces the list rather than merging.
+
+
+## Execution reliability (P3)
+
+- Per-task in-memory execution locks prevent overlapping triggers from running the same task concurrently.
+- Repeated triggers encountered during an active run are recorded as **Skipped** in that task's History instead of being silently ignored.
+- On browser reload, stale `running` state is normalized back to `idle`; waiting tasks retain their waiting reason. These browser-only schedules require the app to be open and the device online to execute.
