@@ -43,14 +43,15 @@ Last checked: 2026-10-11
 - [x] Execution guard regression tests cover duplicate locks, independent tasks, release/retry and stale-state detection.
 
 ## Current verification gate
-- Last verified code commit: run #233 — regression tests PASS (36 tests), production build PASS, Pages deployment PASS.
-- Documentation/status sync commits are newer than run #233 and are not considered verified until their own Actions run passes.
-- Latest run: check https://github.com/mainakgarai007/Task/actions for the newest commit's result.
+- Previous verified baseline: run #236 passed regression tests, production build, Pages artifact upload and deployment.
+- Custom interval feature commits are newer than that baseline and are not considered verified until the newest Actions run passes tests, build and deployment.
+- Check https://github.com/mainakgarai007/Task/actions for the current result.
 
 ## Explicit limits / remaining roadmap (not blockers for this audit)
 - Browser-only GitHub Pages cannot guarantee scheduled execution while the browser/device is completely closed or offline.
 - Browser popup blockers can block `window.open` during background scheduled runs.
-- Native Android background scheduling/notification channels, server-side webhooks, richer file processing and additional interval units remain future work.
+- Native Android background scheduling/notification channels, server-side webhooks and richer file processing remain future work.
+- Custom scheduling now supports minute, hour and day intervals, capped at 365 days; older tasks that store `intervalMinutes` remain compatible.
 - CI tests core functions and the production bundle; it is not a physical Android-device UI test. Device-only behavior still needs confirmation on the target device. A direct interactive live-app smoke test was not available during this audit; use the live URL above for a device check.
 
 ## Workflow rule
