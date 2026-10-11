@@ -141,7 +141,7 @@ Task history records executions and acknowledgements. Failed execution entries i
 Open **⚙ AI** to configure the provider, API key and model. Direct public-data tasks can run without AI at execution time.
 
 ## Backup
-Export creates a versioned JSON backup. Import validates the format, supports legacy array backups, previews valid/invalid task counts, and asks for confirmation before replacing your current task list. Invalid files and backups with zero valid tasks are rejected without changing existing tasks.
+Export creates a versioned JSON backup. Import validates the format, supports legacy array backups, previews valid/invalid task counts, and asks for confirmation before replacing your current task list. Invalid files and backups with zero valid tasks are rejected without changing existing tasks. Duplicate task IDs are skipped after the first valid record and included in the skipped-record count.
 
 ## Browser limitations
 The GitHub Pages/browser version cannot guarantee execution while the browser/device is completely closed or offline. Browser notification permission and browser security can also affect notifications and actions. Native Android background scheduling is planned.

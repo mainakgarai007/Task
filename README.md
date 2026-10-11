@@ -31,6 +31,7 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Retry failed executions directly from task History, including failed one-time tasks
 - Previous-result memory
 - Versioned JSON backup export/import with validation and non-destructive import preview
+- Backup import skips duplicate task IDs after the first valid record and counts duplicates among skipped records
 
 ### Scheduling
 - One-time tasks

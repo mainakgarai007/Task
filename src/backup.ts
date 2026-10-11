@@ -14,7 +14,10 @@ export function parseBackup(raw:string):BackupParseResult{
  if(Array.isArray(parsed)){source=parsed;format="Legacy array";}
  else if(parsed&&typeof parsed==="object") {const e=parsed as Record<string,unknown>;if(e.format!==BACKUP_FORMAT)return{ok:false,error:"Unsupported backup format. Existing tasks were not changed."};if(e.version!==BACKUP_VERSION)return{ok:false,error:"Unsupported backup version. Use a compatible app version."};if(!Array.isArray(e.tasks))return{ok:false,error:"Backup tasks must be an array. Existing tasks were not changed."};source=e.tasks;format="Version 1";}
  else return{ok:false,error:"Invalid backup structure. Expected a task array or versioned backup."};
- const records=source as unknown[],tasks=normalizeTasks(records),invalidCount=records.length-tasks.length;
+ const records=source as unknown[],normalized=normalizeTasks(records),seenIds=new Set<string>();
+ // Duplicate IDs can make task actions/history ambiguous; preserve the first valid record only.
+ const tasks=normalized.filter(task=>{if(seenIds.has(task.id))return false;seenIds.add(task.id);return true;});
+ const invalidCount=records.length-tasks.length;
  if(!tasks.length)return{ok:false,error:records.length?"No valid tasks found. Existing tasks were not changed.":"Backup contains no tasks. Existing tasks were not changed."};
  return{ok:true,tasks,invalidCount,format};
 }

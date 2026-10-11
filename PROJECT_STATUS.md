@@ -53,6 +53,11 @@ Last checked: 2026-10-11
 - [x] Manual retry re-enables a failed one-time task for that immediate execution; history remains preserved.
 - [x] Added regression tests for failed one-time retry preparation and ensuring completed tasks remain unchanged.
 
+### P5 — Backup import integrity
+- [x] Duplicate task IDs in imported backups are skipped after the first valid record to avoid ambiguous task/history identity.
+- [x] Duplicate records contribute to the skipped/invalid count shown in the import preview.
+- [x] Regression test verifies the first record is retained and the duplicate is counted.
+
 ## Explicit limits / remaining roadmap (not blockers for this audit)
 - Browser-only GitHub Pages cannot guarantee scheduled execution while the browser/device is completely closed or offline.
 - Browser popup blockers can block `window.open` during background scheduled runs.
