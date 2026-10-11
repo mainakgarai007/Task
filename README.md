@@ -245,3 +245,8 @@ This first wrapper build is a preview, not a claim of full native parity. Existi
 ## Android native notifications — P8 preview
 
 The Capacitor Android build now routes app-generated notifications through the native Local Notifications plugin when running inside the Android app. The browser/service-worker path remains unchanged. Android may prompt for notification permission. This handles notifications generated while the app is executing; it does **not** yet schedule every task as a persistent native background job or guarantee delivery after force-stop/reboot. A successful CI APK build is not a substitute for testing notification permission and delivery on a physical phone.
+
+
+## App logo
+
+The app now uses a custom teal/green task-check logo in the app header and as the web favicon. The vector asset is `public/task-logo.svg`, so it stays crisp at different screen sizes. Android launcher-icon packaging is still a separate native build task; the header logo does not by itself prove the launcher icon was replaced.

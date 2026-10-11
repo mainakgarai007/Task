@@ -228,3 +228,8 @@ Important: this wrapper does not yet make browser timers persistent Android back
 ## Android native notifications (preview)
 
 In the Android APK, notifications requested while the app is running use Android's native local-notification API and may request notification permission. The browser version continues using browser/service-worker notifications. The current integration does not yet convert all task schedules into persistent Android background jobs, and it does not guarantee task execution after the app is force-stopped or the phone reboots. Test on your phone before relying on it for important reminders.
+
+
+## App logo
+
+The Tasks header and browser favicon use the custom teal/green task-check logo. Android launcher icon packaging is separate and will be verified in a later APK build.

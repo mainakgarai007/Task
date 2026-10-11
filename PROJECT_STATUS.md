@@ -95,3 +95,13 @@ Do not treat a successful website deployment as proof that the Android build or 
 - [ ] Verify regression tests, website build/deploy and APK build in CI.
 - [ ] Confirm notification permission and delivery on a physical Android device.
 - [ ] Persistent background scheduling, reboot recovery, and native acknowledgement action buttons remain separate tasks.
+
+
+## P8 — Native notifications and app identity (in progress)
+
+- [x] Added custom vector logo at `public/task-logo.svg`.
+- [x] Displayed the logo in the app header and added it as the browser favicon/touch icon.
+- [x] Corrected the native notification payload by removing a no-op sound property; task and acknowledgement IDs remain attached as extras.
+- [ ] Run regression tests, web production build, Pages deployment, and Android APK build on the latest commit.
+- [ ] Verify native notifications and logo presentation on a physical Android device.
+- [ ] Native persistent scheduling, Android launcher icon replacement, custom notification channels/sounds, and notification action buttons remain follow-up work.

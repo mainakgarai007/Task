@@ -124,7 +124,6 @@ export async function notify(title:string,body:string,options?:any){
      title,
      body,
      schedule:{at:new Date(Date.now()+1000)},
-     sound:sound==="none"?undefined:undefined,
      extra:{taskId:options?.taskId,ackId:options?.ackId,ackMode:options?.ackMode},
     }]});
    }
