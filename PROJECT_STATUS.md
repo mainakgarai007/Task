@@ -73,3 +73,15 @@ Last checked: 2026-10-11
 
 ## Workflow rule
 Do not begin another feature upgrade until the latest audit commit has green regression tests, build and deployment. Keep README, USER_MANUAL and the in-app User Manual synchronized when workflows change.
+
+
+## P7 — Android APK build pipeline (preview)
+
+- [x] Added Capacitor app configuration using app ID `com.mainakgarai.task`.
+- [x] Vite now uses relative asset paths for Android builds and keeps `/Task/` for GitHub Pages.
+- [x] Added an Android GitHub Actions workflow that runs regression tests, builds web assets, generates the Android project, assembles a debug APK, and uploads it for 14 days.
+- [ ] Verify the first Android workflow run is green and that the APK artifact exists.
+- [ ] Native notification integration and persistent Android background scheduling are still outstanding.
+- [ ] Install and test on a physical Android phone before calling the APK daily-use ready.
+
+Do not treat a successful website deployment as proof that the Android build or native background scheduling works. Keep the README, standalone manual and in-app manual synchronized.

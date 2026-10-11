@@ -233,3 +233,10 @@ Smart RSS checks evaluate conditions against newly detected item records. Empty 
 - If a task is marked `running` without an active in-memory lock, the app records stale-state recovery and allows a retry.
 - On reload, saved `running` state is normalized to `idle`; waiting tasks retain their waiting reason.
 - Browser-only schedules require the app to be open and the device online; execution while fully closed or offline is not guaranteed.
+
+
+## Android APK preview (in progress)
+
+The Android wrapper is being introduced with Capacitor while the GitHub Pages PWA remains available. Every push to `main` also runs the Android APK workflow; a successful run uploads an installable **debug APK** as the `tasks-android-debug-apk` artifact for 14 days. Open the repository's **Actions → Build Android APK → latest successful run → Artifacts** to download it.
+
+This first wrapper build is a preview, not a claim of full native parity. Existing browser scheduling uses in-app timers and cannot guarantee work after Android force-stops/closes the app. Native persistent background scheduling, native notification actions/channels, and physical-device behavior need a separate implementation and device test before the APK is considered daily-use ready. Keep using the live PWA as the stable fallback.

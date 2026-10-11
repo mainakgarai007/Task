@@ -216,3 +216,10 @@ New exports use a versioned `tasks-backup` JSON envelope. Older plain-array back
 The scheduler uses a per-task in-memory execution guard to prevent overlapping executions in the same open app session. If a duplicate trigger arrives while a task is already running, the duplicate is recorded as **Skipped** in **History**; the active execution is not cancelled.
 
 If a task has a saved `running` marker but no active execution lock, the app records a stale-state recovery entry and permits a retry. On page reload, saved `running` state is normalized to `idle`, while tasks waiting for a prerequisite retain their waiting reason. Check **History** for successful, failed, and skipped entries. Keep the app open and the device online for scheduled runs; browser-only scheduling cannot guarantee execution while the browser is fully closed or offline.
+
+
+## Android APK preview
+
+An Android debug APK is being built by GitHub Actions alongside the website. To download it, open the repository's **Actions → Build Android APK → latest successful run → Artifacts → tasks-android-debug-apk**. The artifact expires after 14 days, so download it if you want to install that build. Debug APKs are for preview/testing and are not a Play Store release.
+
+Important: this wrapper does not yet make browser timers persistent Android background jobs. Tasks may not execute when Android closes or force-stops the app. Native background scheduling and notification integration must be added and tested on a real phone before relying on it for important reminders. The GitHub Pages version remains available as a fallback.
