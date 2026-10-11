@@ -116,7 +116,7 @@ export async function notify(title:string,body:string,options?:any){
   const silent=sound==="none"||customSound;
   if("serviceWorker" in navigator){
    const reg=await navigator.serviceWorker.getRegistration();
-   if(reg?.showNotification){const notificationOptions:any={body,data:{taskId:options?.taskId,ackId:options?.ackId},silent};if(options?.actions)notificationOptions.actions=options.actions;await reg.showNotification(title,notificationOptions);}
+   if(reg?.showNotification){const notificationOptions:any={body,data:{taskId:options?.taskId,ackId:options?.ackId,ackMode:options?.ackMode},silent};if(options?.ackId){notificationOptions.actions=options.ackMode==="completed"?[{action:"seen",title:"See it"},{action:"completed",title:"Completed"}]:[{action:"seen",title:"See it"}];}else if(options?.actions)notificationOptions.actions=options.actions;await reg.showNotification(title,notificationOptions);}
    else if("Notification" in window&&Notification.permission==="granted")new Notification(title,{body,silent});
   }else if("Notification" in window){
    if(Notification.permission==="granted")new Notification(title,{body,silent});

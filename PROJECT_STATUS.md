@@ -58,6 +58,12 @@ Last checked: 2026-10-11
 - [x] Duplicate records contribute to the skipped/invalid count shown in the import preview.
 - [x] Regression test verifies the first record is retained and the duplicate is counted.
 
+### P6 — Notification acknowledgement reliability
+- [x] Show explicit acknowledgement actions in service-worker notifications.
+- [x] Preserve the selected action when launching the app from a closed-window notification.
+- [x] Validate action and IDs from the launch URL; add regression tests for valid, malformed, and encoded values.
+- [ ] Confirm automated regression tests, production build, and Pages deployment before closing this update.
+
 ## Explicit limits / remaining roadmap (not blockers for this audit)
 - Browser-only GitHub Pages cannot guarantee scheduled execution while the browser/device is completely closed or offline.
 - Browser popup blockers can block `window.open` during background scheduled runs.

@@ -3,6 +3,7 @@ import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule,N
 import {loadTasks,saveTasks,uid} from "./storage";
 import {ExecutionGuard, shouldRecoverRunningExecution, reenableFailedTask} from "./executionGuard";
 import {parseBackup,createBackup} from "./backup";
+import {parseNotificationAction} from "./notificationActions";
 import {nextRun,notify,playNotificationSound,intervalToMinutes} from "./scheduler";
 import {evaluateCondition,evaluateConditionTree} from "./conditions";
 import {createTaskWithAI,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel,executeTaskWithAI} from "./ai";
@@ -203,6 +204,14 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
  const aiReady=Boolean(ai.enabled&&ai.apiKey.trim()&&ai.endpoint.trim()&&ai.model.trim());
 
  useEffect(()=>{tasksRef.current=tasks;},[tasks]);
+ useEffect(()=>{
+  const action=parseNotificationAction(window.location.search);
+  if(!action)return;
+  void acknowledgeTask(action.taskId,action.ackId,action.mode);
+  const url=new URL(window.location.href);
+  ["taskAckTask","taskAckId","taskAckAction"].forEach(key=>url.searchParams.delete(key));
+  window.history.replaceState({}, "", url.pathname+url.search+url.hash);
+ },[]);
  useEffect(()=>{saveTasks(tasks);},[tasks]);
  useEffect(()=>{if(!aiReady)return;setTasks(ts=>ts.map(t=>t.executionState==="waiting"&&t.waitingReason==="AI settings are required"?{...t,executionState:"idle",waitingReason:undefined}:t));},[aiReady]);
  useEffect(()=>{if(manualType!=="weather"){setWeatherPlaces([]);return;}const q=weatherSearch.trim();if(!q){setWeatherPlaces([]);return;}const timer=setTimeout(async()=>{setWeatherBusy(true);try{const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=100&language=en&format=json&countryCode=IN");if(!r.ok)throw new Error();const d=await r.json();setWeatherPlaces((d?.results||[]).filter((p:any)=>p.country_code==="IN").map((p:any)=>({name:p.name,state:p.admin1,country:p.country,latitude:p.latitude,longitude:p.longitude})));}catch{setWeatherPlaces([]);}finally{setWeatherBusy(false);}},280);return()=>clearTimeout(timer);},[weatherSearch,manualType]);
@@ -300,7 +309,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    const sequenceValue=task.sequence?.enabled?task.sequence.current:undefined;
    const acknowledgement:TaskAcknowledgement|undefined=requiresAcknowledgement?{id:uid(),executionId:record.id,mode:task.notificationMode==="completed"?"completed":"see",status:"pending",createdAt:finished,remindEveryMinutes:task.notificationMode==="completed"?Math.max(1,task.remindIfNotCompletedMinutes||5):undefined,nextReminderAt:task.notificationMode==="completed"?new Date(Date.now()+Math.max(1,task.remindIfNotCompletedMinutes||5)*60000).toISOString():undefined,sequenceValue,terminalAfterAcknowledgement:terminalAfterExecution}:undefined;
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),previousResult:t.lastResult,lastResult:result,lastChange:change,lastError:undefined,executionState:"idle",waitingReason:undefined,enabled:!executionEnded,status:executionEnded?"completed":"active",nextRun:executionEnded?t.nextRun:recurringNext,pendingAcknowledgement:acknowledgement,action:task.action?.rssMonitor?{...t.action,rssHistory:[...(t.action.rssHistory||[]),...parseRssResultHistory(result,finished)].slice(-200)}:t.action}:t));
-   if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+(change.changed?change.summary:result.slice(0,300)),{taskId:id,ackId:acknowledgement.id,sound:task.action?.notificationSound||"default"});
+   if(acknowledgement)await notify(task.notificationMode==="completed"?"Task reminder":"Task update",task.title+"\n"+(sequenceValue!=null?"Step "+sequenceValue+" · ":"")+(change.changed?change.summary:result.slice(0,300)),{taskId:id,ackId:acknowledgement.id,ackMode:acknowledgement.mode,sound:task.action?.notificationSound||"default"});
    // A plain direct task must still notify when acknowledgement mode is disabled.
    // IF/THEN chains own their notifications, so avoid duplicate alerts there.
    const ruleConfigured=Boolean(task.action?.conditionTree||rules.length||task.action?.condition||task.action?.thenActions?.length);

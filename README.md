@@ -32,6 +32,7 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Previous-result memory
 - Versioned JSON backup export/import with validation and non-destructive import preview
 - Backup import skips duplicate task IDs after the first valid record and counts duplicates among skipped records
+- Notification acknowledgement actions provide **See it** and (for completion reminders) **Completed** buttons; when no app window is open, the action is carried through a validated app URL on launch
 
 ### Scheduling
 - One-time tasks
