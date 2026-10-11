@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {nextRun} from "./scheduler";
+import {intervalToMinutes,nextRun} from "./scheduler";
 import type {Task} from "./types";
 describe("schedule progression",()=>{
  it("advances hourly schedules by one hour and clears seconds",()=>{
@@ -18,5 +18,21 @@ describe("schedule progression",()=>{
  it("clamps an impossible monthly day to the last day of the month",()=>{
   const from=new Date(2026,9,1,8,0,0),next=new Date(nextRun(from,"monthly",{time:"09:00",months:[9],monthDays:[31]} as Task["schedule"]));
   expect(next.getMonth()).toBe(9);expect(next.getDate()).toBe(31);expect(next.getHours()).toBe(9);
+ });
+});
+
+describe("custom interval units",()=>{
+ it("converts minutes, hours and days to stored minutes",()=>{
+  expect(intervalToMinutes(30,"minutes")).toBe(30);
+  expect(intervalToMinutes(2,"hours")).toBe(120);
+  expect(intervalToMinutes(3,"days")).toBe(4320);
+ });
+ it("rounds fractional intervals to whole minutes",()=>{
+  expect(intervalToMinutes(1.5,"hours")).toBe(90);
+ });
+ it("schedules custom day intervals without changing the relative interval semantics",()=>{
+  const from=new Date(2026,9,9,12,0,0);
+  const next=new Date(nextRun(from,"custom",{time:"",intervalMinutes:intervalToMinutes(2,"days")} as Task["schedule"]));
+  expect(next.getTime()-from.getTime()).toBe(2*24*60*60*1000);
  });
 });
