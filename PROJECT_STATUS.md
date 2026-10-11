@@ -7,9 +7,9 @@ Last checked: 2026-10-11
 - Branch: `main`
 - Live app: https://mainakgarai007.github.io/Task/
 - Workflow: Deploy Tasks Tool
-- Latest code fix: `9f649e61d69bb5e322b2a9198c0551dc89b3fd52` (`fix: release execution guard with supported API`).
-- GitHub Actions run #233 passed regression tests, TypeScript/Vite build, Pages artifact upload and deployment: https://github.com/mainakgarai007/Task/actions/runs/38128659421
-- Follow-up audit consolidated duplicate execution-reliability sections in README and USER_MANUAL; this documentation sync plus this status update must pass its own Actions run before it is considered fully verified.
+- Latest scheduling audit fix: legacy monthly tasks without a `months` selection now default to every month, consistent with the task editor and expected monthly cadence.
+- Added a regression test reproducing the legacy monthly scheduling case.
+- Custom interval scheduling (minutes/hours/days) and execution reliability work remain in place; the latest commit must pass Actions before this audit is considered verified.
 
 ## Verified completed
 ### RSS reliability and regression coverage
@@ -33,6 +33,7 @@ Last checked: 2026-10-11
 - [x] README, standalone manual and in-app manual describe the RSS history UI.
 
 ### Task storage, schedules and execution reliability
+- [x] Legacy monthly schedules without explicit month selections default to every month (regression-tested).
 - [x] Task storage normalization covers malformed entries and legacy action fallback.
 - [x] Stale running state is reset to idle on reload; waiting state and its reason are retained.
 - [x] RSS item history round-trip through localStorage is covered by tests.
@@ -43,8 +44,7 @@ Last checked: 2026-10-11
 - [x] Execution guard regression tests cover duplicate locks, independent tasks, release/retry and stale-state detection.
 
 ## Current verification gate
-- Previous verified baseline: run #236 passed regression tests, production build, Pages artifact upload and deployment.
-- Custom interval feature commits are newer than that baseline and are not considered verified until the newest Actions run passes tests, build and deployment.
+- The monthly scheduling compatibility fix and regression test are committed; the newest GitHub Actions run must pass regression tests, production build, Pages artifact upload and deployment before this update is considered verified.
 - Check https://github.com/mainakgarai007/Task/actions for the current result.
 
 ## Explicit limits / remaining roadmap (not blockers for this audit)
