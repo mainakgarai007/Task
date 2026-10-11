@@ -1,4 +1,6 @@
 import type {Task,RssItemRecord} from "./types";
+import {Capacitor} from "@capacitor/core";
+import {Geolocation} from "@capacitor/geolocation";
 
 type ApiCacheEntry={savedAt:number;data:any};
 const API_CACHE_PREFIX="tasks-api-cache:";
@@ -59,7 +61,19 @@ export async function fetchWeather(location:string,coords?:{latitude?:number;lon
 🌅 Sunrise ${fmtTime(day?.sunrise?.[0])} · 🌇 Sunset ${fmtTime(day?.sunset?.[0])}`;
 }
 
-export function getCurrentLocation():Promise<{latitude:number;longitude:number}>{
+export async function getCurrentLocation():Promise<{latitude:number;longitude:number}>{
+ if(Capacitor.isNativePlatform()){
+  try{
+   let permission=await Geolocation.checkPermissions();
+   if(permission.location!=="granted"&&permission.coarseLocation!=="granted")permission=await Geolocation.requestPermissions();
+   if(permission.location!=="granted"&&permission.coarseLocation!=="granted")throw new Error("Location permission was denied. Allow location access for Tasks in Android Settings, then try again.");
+   const position=await Geolocation.getCurrentPosition({enableHighAccuracy:true,timeout:20000,maximumAge:0});
+   return {latitude:position.coords.latitude,longitude:position.coords.longitude};
+  }catch(error){
+   if(error instanceof Error&&/permission/i.test(error.message))throw error;
+   throw new Error(error instanceof Error?error.message:"Could not get your current location. Check Android location settings and try again.");
+  }
+ }
  return new Promise((resolve,reject)=>{
   if(!navigator.geolocation){reject(new Error("Location access is not supported by this browser."));return;}
   navigator.geolocation.getCurrentPosition(

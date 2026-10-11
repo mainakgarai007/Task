@@ -233,3 +233,12 @@ In the Android APK, notifications requested while the app is running use Android
 ## App logo
 
 The Tasks header and browser favicon use the custom teal/green task-check logo. Android launcher icon packaging is separate and will be verified in a later APK build.
+
+
+## Location permission on mobile
+
+Tap **Use my current location** to request access. In the APK, Android's native permission dialog is used. If access was denied earlier, open **Android Settings → Apps → Tasks → Permissions → Location**, allow access, then retry. In the browser/PWA, enable Location for the site in the browser's site settings.
+
+## Mobile notification sound
+
+Choose Default, Soft, Chime, Alert, Beep or No sound in the task's **Notification sound** menu. **Preview sound** plays the tone while the app is open. Android may use the notification channel's sound setting instead of the preview tone; native per-preset notification channels are not yet fully mapped.

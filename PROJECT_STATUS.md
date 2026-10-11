@@ -105,3 +105,13 @@ Do not treat a successful website deployment as proof that the Android build or 
 - [ ] Run regression tests, web production build, Pages deployment, and Android APK build on the latest commit.
 - [ ] Verify native notifications and logo presentation on a physical Android device.
 - [ ] Native persistent scheduling, Android launcher icon replacement, custom notification channels/sounds, and notification action buttons remain follow-up work.
+
+
+## Location permission + mobile sound follow-up (2026-10-11)
+
+- [x] Added Capacitor Geolocation to the Android app's location lookup path so Android can request runtime location permission instead of relying on browser geolocation inside the WebView.
+- [x] Added clearer recovery instructions for previously denied location permissions on Android and in browser site settings.
+- [x] Kept task-level sound presets and added accurate user-facing notes about preview vs Android notification-channel behavior.
+- [ ] Verify tests, website deployment and APK build for this commit.
+- [ ] Confirm runtime location permission on the physical phone.
+- [ ] Complete native per-preset notification-channel sound mapping and verify it on the physical phone; current Android channel sound may override preview presets.
