@@ -3,7 +3,7 @@ import {Task,frequencyLabels,ExecutionRecord,Frequency,TaskAction,TaskSchedule,N
 import {loadTasks,saveTasks,uid} from "./storage";
 import {ExecutionGuard, shouldRecoverRunningExecution} from "./executionGuard";
 import {parseBackup,createBackup} from "./backup";
-import {nextRun,notify,playNotificationSound} from "./scheduler";
+import {nextRun,notify,playNotificationSound,intervalToMinutes} from "./scheduler";
 import {evaluateCondition,evaluateConditionTree} from "./conditions";
 import {createTaskWithAI,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel,executeTaskWithAI} from "./ai";
 import {executeDirectTask,getCurrentLocation,reverseGeocodeIndia,searchAnime} from "./dataSources";
@@ -441,8 +441,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
   setError("");
   if(!manualTitle.trim())return setError("Give the task a title.");
   if(manualFrequency==="once"&&new Date(manualDate+"T"+manualTime+":00")<=new Date())return setError("Choose a future time.");
-  const intervalMultiplier=manualIntervalUnit==="days"?1440:manualIntervalUnit==="hours"?60:1;
-  const intervalMinutes=Math.round(Number(manualInterval)*intervalMultiplier);
+  const intervalMinutes=intervalToMinutes(Number(manualInterval),manualIntervalUnit);
   if(manualFrequency==="custom"&&(!Number.isFinite(intervalMinutes)||intervalMinutes<1||intervalMinutes>525600))return setError("Custom interval must be between 1 minute and 365 days.");
   if(manualMaxRuns&&Number(manualMaxRuns)<1)return setError("Maximum runs must be at least 1.");
   if(manualSequenceEnabled){
