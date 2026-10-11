@@ -45,13 +45,13 @@ Last checked: 2026-10-11
 
 ## Current verification gate
 - Monthly scheduling compatibility fix and regression test passed in Actions run #250: https://github.com/mainakgarai007/Task/actions/runs/38130467869
-- P4 History retry is implemented in code and documented; its newest GitHub Actions run must pass regression tests, production build, Pages artifact upload and deployment before this update is considered verified.
+- P4 History retry and regression coverage passed Actions run #252: https://github.com/mainakgarai007/Task/actions/runs/38131289826. A final UI guard now hides retry for paused tasks; this latest change needs its own green Actions run.
 - Full interactive browser/device testing remains a separate verification step after the build/deployment gate.
 
 ## P4 — History retry
 - [x] Failed execution history entries expose a Retry now action when the task is not completed.
 - [x] Manual retry re-enables a failed one-time task for that immediate execution; history remains preserved.
-- [ ] Add/confirm automated regression coverage for the retry flow.
+- [x] Added regression tests for failed one-time retry preparation and ensuring completed tasks remain unchanged.
 
 ## Explicit limits / remaining roadmap (not blockers for this audit)
 - Browser-only GitHub Pages cannot guarantee scheduled execution while the browser/device is completely closed or offline.
