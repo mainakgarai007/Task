@@ -28,6 +28,7 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Active / paused / completed / failed states
 - Running / waiting execution state with a clear waiting reason
 - Execution history and error logs
+- Retry failed executions directly from task History, including failed one-time tasks
 - Previous-result memory
 - Versioned JSON backup export/import with validation and non-destructive import preview
 

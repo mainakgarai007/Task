@@ -135,7 +135,7 @@ New item → Episode 7
 ```
 
 ## History and controls
-Task history records executions and acknowledgements. Tasks can be edited, paused, resumed, run immediately or deleted.
+Task history records executions and acknowledgements. Failed execution entries include **Retry now** when the task is not completed. This re-enables a failed one-time task for an immediate retry while preserving its history. Tasks can also be edited, paused, resumed, run immediately or deleted.
 
 ## AI
 Open **⚙ AI** to configure the provider, API key and model. Direct public-data tasks can run without AI at execution time.

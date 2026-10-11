@@ -44,8 +44,14 @@ Last checked: 2026-10-11
 - [x] Execution guard regression tests cover duplicate locks, independent tasks, release/retry and stale-state detection.
 
 ## Current verification gate
-- The monthly scheduling compatibility fix and regression test are committed; the newest GitHub Actions run must pass regression tests, production build, Pages artifact upload and deployment before this update is considered verified.
-- Check https://github.com/mainakgarai007/Task/actions for the current result.
+- Monthly scheduling compatibility fix and regression test passed in Actions run #250: https://github.com/mainakgarai007/Task/actions/runs/38130467869
+- P4 History retry is implemented in code and documented; its newest GitHub Actions run must pass regression tests, production build, Pages artifact upload and deployment before this update is considered verified.
+- Full interactive browser/device testing remains a separate verification step after the build/deployment gate.
+
+## P4 — History retry
+- [x] Failed execution history entries expose a Retry now action when the task is not completed.
+- [x] Manual retry re-enables a failed one-time task for that immediate execution; history remains preserved.
+- [ ] Add/confirm automated regression coverage for the retry flow.
 
 ## Explicit limits / remaining roadmap (not blockers for this audit)
 - Browser-only GitHub Pages cannot guarantee scheduled execution while the browser/device is completely closed or offline.
