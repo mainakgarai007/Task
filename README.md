@@ -37,7 +37,7 @@ Create scheduled tasks manually or with AI. Tasks are stored locally in the brow
 - Daily
 - Weekly
 - Monthly
-- Custom minute intervals
+- Custom intervals in minutes, hours or days (up to 365 days)
 - Start date
 - End date
 - Weekly day or multiple selected weekdays (for example Sunday + Friday)
