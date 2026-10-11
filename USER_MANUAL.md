@@ -4,7 +4,7 @@
 Tap **＋** and choose Manual or AI. Manual mode lets you choose the schedule, action, notification mode, sequence and IF/THEN rules. AI mode creates a plan from natural language using your configured provider.
 
 ## Scheduling
-Supported schedules: once, hourly, daily, weekly, monthly and custom intervals in minutes, hours or days (up to 365 days). Custom intervals are relative to the previous run. Start date, end date, multiple weekdays, multiple months, month-days and maximum run count are supported.
+Supported schedules: once, hourly, daily, weekly, monthly and custom intervals in minutes, hours or days (up to 365 days). Custom intervals are relative to the previous run. Start date, end date, multiple weekdays, multiple months, month-days and maximum run count are supported. For older monthly tasks without an explicit month selection, the scheduler defaults to every month.
 
 
 ### Notification sounds
