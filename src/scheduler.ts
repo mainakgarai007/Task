@@ -12,6 +12,13 @@ function setLocalTime(date:Date,time?:string){
  return date;
 }
 
+export type IntervalUnit="minutes"|"hours"|"days";
+
+export function intervalToMinutes(value:number,unit:IntervalUnit):number{
+ const multiplier=unit==="days"?1440:unit==="hours"?60:1;
+ return Math.round(value*multiplier);
+}
+
 export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["schedule"]):string{
  const d=new Date(from);
 
