@@ -221,6 +221,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
  async function acknowledgeTask(taskId:string,ackId:string,mode:"seen"|"completed"){
   const task=tasksRef.current.find(t=>t.id===taskId);
   if(!task?.pendingAcknowledgement||task.pendingAcknowledgement.id!==ackId)return;
+  if(mode==="completed"&&task.pendingAcknowledgement.mode!=="completed")return;
   const now=new Date().toISOString();
   setTasks(ts=>ts.map(t=>{
    if(t.id!==taskId||t.pendingAcknowledgement?.id!==ackId)return t;
