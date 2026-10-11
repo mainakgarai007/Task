@@ -250,7 +250,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    if(task){const at=new Date().toISOString(),audit:ExecutionRecord={id:uid(),startedAt:at,finishedAt:at,status:"skipped",error:"Skipped: this task already has an execution in progress."};setTasks(ts=>ts.map(t=>t.id===id?{...t,executions:[audit,...(t.executions||[])].slice(0,50)}:t));}
    return;
   }
-  if(!task||!task.enabled||task.status==="completed"||task.executionState==="running")return;
+  if(!task||!task.enabled||task.status==="completed"){executionLocks.current.release(id);return;}
   // A persisted running marker without an in-memory lock is stale; recover it and allow a retry.
   if(shouldRecoverRunningExecution(false,task.executionState)){
    const at=new Date().toISOString(),audit:ExecutionRecord={id:uid(),startedAt:at,finishedAt:at,status:"skipped",error:"Recovered stale running state: no execution was active in this app session."};
