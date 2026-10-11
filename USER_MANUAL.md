@@ -210,11 +210,6 @@ New exports use a versioned `tasks-backup` JSON envelope. Older plain-array back
 
 ## Execution reliability and recovery
 
-The scheduler uses a per-task lock to prevent overlapping executions of the same task in one open app session. If a duplicate trigger arrives while the task is already running, the duplicate is recorded as **Skipped** in **History**. This does not cancel the execution already in progress.
+The scheduler uses a per-task in-memory execution guard to prevent overlapping executions in the same open app session. If a duplicate trigger arrives while a task is already running, the duplicate is recorded as **Skipped** in **History**; the active execution is not cancelled.
 
-If the page reloads, a saved `running` state is recovered to `idle` because the in-memory execution cannot survive a reload. Tasks waiting for a known prerequisite keep their waiting reason. Check **History** for successful, failed, and skipped execution entries. The browser app cannot run scheduled work while the browser is fully closed or the device is offline.
-
-
-## Execution reliability and recovery
-
-Each task has an in-memory execution lock. Duplicate triggers during an active run are recorded as **Skipped** in History. If a task has a `running` marker but no active lock, the app records a stale-state recovery entry and permits a retry. After reload, saved `running` state is normalized to `idle`, while `waiting` tasks retain their waiting reason. Keep the app open and the device online for scheduled runs; browser-only scheduling cannot guarantee execution while the browser is fully closed.
+If a task has a saved `running` marker but no active execution lock, the app records a stale-state recovery entry and permits a retry. On page reload, saved `running` state is normalized to `idle`, while tasks waiting for a prerequisite retain their waiting reason. Check **History** for successful, failed, and skipped entries. Keep the app open and the device online for scheduled runs; browser-only scheduling cannot guarantee execution while the browser is fully closed or offline.
