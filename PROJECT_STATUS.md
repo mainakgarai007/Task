@@ -45,7 +45,7 @@ Last checked: 2026-10-11
 
 ## Current verification gate
 - Monthly scheduling compatibility fix and regression test passed in Actions run #250: https://github.com/mainakgarai007/Task/actions/runs/38130467869
-- P4 History retry and regression coverage passed Actions run #252: https://github.com/mainakgarai007/Task/actions/runs/38131289826. A final UI guard now hides retry for paused tasks; this latest change needs its own green Actions run.
+- P4 History retry, regression coverage, and the paused-task UI guard passed Actions run #253: https://github.com/mainakgarai007/Task/actions/runs/38131369124.
 - Full interactive browser/device testing remains a separate verification step after the build/deployment gate.
 
 ## P4 — History retry
