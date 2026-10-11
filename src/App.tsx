@@ -336,7 +336,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
    const message=e instanceof Error?e.message:"Task execution failed.",finished=new Date().toISOString(),record:ExecutionRecord={id:uid(),startedAt:started,finishedAt:finished,status:"failed",error:message};
    setTasks(ts=>ts.map(t=>t.id===id?{...t,lastRun:finished,runCount:t.runCount+1,history:[finished,...t.history].slice(0,50),executions:[record,...(t.executions||[])].slice(0,50),lastError:message,executionState:"idle",waitingReason:undefined,enabled:t.frequency==="once"?false:t.enabled,status:t.frequency==="once"?"failed":"active",nextRun:t.frequency==="once"?t.nextRun:nextRun(new Date(),t.frequency,t.schedule)}:t));
    await notify("Task failed",task.title);
-  }finally{executionLocks.current.delete(id);}
+  }finally{executionLocks.current.release(id);}
  }
  executeTaskRef.current=executeTask;
 
