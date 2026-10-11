@@ -61,7 +61,7 @@ export function nextRun(from:Date,frequency:Task["frequency"],schedule?:Task["sc
  }
 
  if(frequency==="monthly"){
-  const months=(schedule?.months?.length?schedule.months:[d.getMonth()]).map(n=>Math.min(11,Math.max(0,Number(n)))).sort((a,b)=>a-b);
+  const months=(schedule?.months?.length?schedule.months:Array.from({length:12},(_,i)=>i)).map(n=>Math.min(11,Math.max(0,Number(n)))).sort((a,b)=>a-b);
   const days=(schedule?.monthDays?.length?schedule.monthDays:[Number(schedule?.monthDay)||d.getDate()]).map(n=>Math.min(31,Math.max(1,Number(n)))).sort((a,b)=>a-b);
   const baseYear=d.getFullYear();
   let found:Date|undefined;
