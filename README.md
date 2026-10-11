@@ -225,14 +225,8 @@ Smart RSS checks evaluate conditions against newly detected item records. Empty 
 
 ## Execution reliability (P3)
 
-- Per-task in-memory execution locks prevent overlapping triggers from running the same task concurrently.
-- Repeated triggers encountered during an active run are recorded as **Skipped** in that task's History instead of being silently ignored.
-- On browser reload, stale `running` state is normalized back to `idle`; waiting tasks retain their waiting reason. These browser-only schedules require the app to be open and the device online to execute.
-
-
-## Execution reliability (P3)
-
-- A per-task execution guard prevents overlapping runs in the current app session.
-- Duplicate triggers are recorded as **Skipped** in task History.
-- If a task is marked `running` without a matching in-memory lock, the app records stale-state recovery and allows a retry. Reload normalization resets stale running state to idle and preserves waiting tasks.
-- This browser-only app needs the page open and the device online for scheduled execution; it cannot guarantee background runs when fully closed.
+- A per-task in-memory execution guard prevents overlapping runs in the current app session.
+- Duplicate triggers are recorded as **Skipped** in task History without cancelling the active run.
+- If a task is marked `running` without an active in-memory lock, the app records stale-state recovery and allows a retry.
+- On reload, saved `running` state is normalized to `idle`; waiting tasks retain their waiting reason.
+- Browser-only schedules require the app to be open and the device online; execution while fully closed or offline is not guaranteed.
