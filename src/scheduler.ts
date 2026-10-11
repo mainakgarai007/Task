@@ -1,4 +1,6 @@
 import {Task} from "./types";
+import {Capacitor} from "@capacitor/core";
+import {LocalNotifications} from "@capacitor/local-notifications";
 
 function timeParts(time?:string){
  const match=/^(\d{1,2}):(\d{2})$/.exec(time||"");
@@ -112,6 +114,23 @@ export function playNotificationSound(sound:"none"|"default"|"soft"|"chime"|"ale
 export async function notify(title:string,body:string,options?:any){
  try{
   const sound=options?.sound||"default";
+  if(Capacitor.isNativePlatform()){
+   const permission=await LocalNotifications.checkPermissions();
+   const granted=permission.display==="granted"||((await LocalNotifications.requestPermissions()).display==="granted");
+   if(granted){
+    const notificationId=Number(String(Date.now()).slice(-8));
+    await LocalNotifications.schedule({notifications:[{
+     id:notificationId,
+     title,
+     body,
+     schedule:{at:new Date(Date.now()+1000)},
+     sound:sound==="none"?undefined:undefined,
+     extra:{taskId:options?.taskId,ackId:options?.ackId,ackMode:options?.ackMode},
+    }]});
+   }
+   if(sound!=="none"&&sound!=="default")playNotificationSound(sound);
+   return;
+  }
   const customSound=sound!=="none"&&sound!=="default";
   const silent=sound==="none"||customSound;
   if("serviceWorker" in navigator){

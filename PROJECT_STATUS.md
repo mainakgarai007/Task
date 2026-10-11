@@ -85,3 +85,13 @@ Do not begin another feature upgrade until the latest audit commit has green reg
 - [ ] Install and test on a physical Android phone before calling the APK daily-use ready.
 
 Do not treat a successful website deployment as proof that the Android build or native background scheduling works. Keep the README, standalone manual and in-app manual synchronized.
+
+
+## P8 — Native Android notification bridge
+
+- [x] Added Capacitor Local Notifications dependency.
+- [x] Routed notification requests through Android native local notifications when running as a native app; browser notifications remain the fallback path for web.
+- [x] Kept task/acknowledgement metadata in notification extras for future native action handling.
+- [ ] Verify regression tests, website build/deploy and APK build in CI.
+- [ ] Confirm notification permission and delivery on a physical Android device.
+- [ ] Persistent background scheduling, reboot recovery, and native acknowledgement action buttons remain separate tasks.

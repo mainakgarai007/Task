@@ -240,3 +240,8 @@ Smart RSS checks evaluate conditions against newly detected item records. Empty 
 The Android wrapper is being introduced with Capacitor while the GitHub Pages PWA remains available. Every push to `main` also runs the Android APK workflow; a successful run uploads an installable **debug APK** as the `tasks-android-debug-apk` artifact for 14 days. Open the repository's **Actions → Build Android APK → latest successful run → Artifacts** to download it.
 
 This first wrapper build is a preview, not a claim of full native parity. Existing browser scheduling uses in-app timers and cannot guarantee work after Android force-stops/closes the app. Native persistent background scheduling, native notification actions/channels, and physical-device behavior need a separate implementation and device test before the APK is considered daily-use ready. Keep using the live PWA as the stable fallback.
+
+
+## Android native notifications — P8 preview
+
+The Capacitor Android build now routes app-generated notifications through the native Local Notifications plugin when running inside the Android app. The browser/service-worker path remains unchanged. Android may prompt for notification permission. This handles notifications generated while the app is executing; it does **not** yet schedule every task as a persistent native background job or guarantee delivery after force-stop/reboot. A successful CI APK build is not a substitute for testing notification permission and delivery on a physical phone.

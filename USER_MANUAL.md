@@ -223,3 +223,8 @@ If a task has a saved `running` marker but no active execution lock, the app rec
 An Android debug APK is being built by GitHub Actions alongside the website. To download it, open the repository's **Actions → Build Android APK → latest successful run → Artifacts → tasks-android-debug-apk**. The artifact expires after 14 days, so download it if you want to install that build. Debug APKs are for preview/testing and are not a Play Store release.
 
 Important: this wrapper does not yet make browser timers persistent Android background jobs. Tasks may not execute when Android closes or force-stops the app. Native background scheduling and notification integration must be added and tested on a real phone before relying on it for important reminders. The GitHub Pages version remains available as a fallback.
+
+
+## Android native notifications (preview)
+
+In the Android APK, notifications requested while the app is running use Android's native local-notification API and may request notification permission. The browser version continues using browser/service-worker notifications. The current integration does not yet convert all task schedules into persistent Android background jobs, and it does not guarantee task execution after the app is force-stopped or the phone reboots. Test on your phone before relying on it for important reminders.
