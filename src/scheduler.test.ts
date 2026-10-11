@@ -15,7 +15,11 @@ describe("schedule progression",()=>{
   const from=new Date(2026,9,9,8,0,0),next=new Date(nextRun(from,"daily",{time:"07:00",weekdays:[1]} as Task["schedule"]));
   expect(next.getDay()).toBe(1);expect(next.getHours()).toBe(7);expect(next.getDate()).toBe(12);
  });
- it("defaults legacy monthly schedules without selected months to every month",()=>{\n  const from=new Date(2026,9,20,8,0,0),next=new Date(nextRun(from,"monthly",{time:"09:00",monthDay:15} as Task["schedule"]));\n  expect(next.getFullYear()).toBe(2026);expect(next.getMonth()).toBe(10);expect(next.getDate()).toBe(15);expect(next.getHours()).toBe(9);\n });\n it("clamps an impossible monthly day to the last day of the month",()=>{
+ it("defaults legacy monthly schedules without selected months to every month",()=>{
+  const from=new Date(2026,9,20,8,0,0),next=new Date(nextRun(from,"monthly",{time:"09:00",monthDay:15} as Task["schedule"]));
+  expect(next.getFullYear()).toBe(2026);expect(next.getMonth()).toBe(10);expect(next.getDate()).toBe(15);expect(next.getHours()).toBe(9);
+ });
+ it("clamps an impossible monthly day to the last day of the month",()=>{
   const from=new Date(2026,9,1,8,0,0),next=new Date(nextRun(from,"monthly",{time:"09:00",months:[9],monthDays:[31]} as Task["schedule"]));
   expect(next.getMonth()).toBe(9);expect(next.getDate()).toBe(31);expect(next.getHours()).toBe(9);
  });
