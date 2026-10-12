@@ -237,7 +237,7 @@ The Tasks header and browser favicon use the custom teal/green task-check logo. 
 
 ## Location permission on mobile
 
-Tap **Use my current location** to request access. In the APK, Android's native permission dialog is used. If access was denied earlier, open **Android Settings → Apps → Tasks → Permissions → Location**, allow access, then retry. In the browser/PWA, enable Location for the site in the browser's site settings.
+Tap **Use my current location** to request access. In the APK, Android's native permission dialog is used; the build declares both coarse and fine location permissions in AndroidManifest.xml. If access was denied earlier, open **Android Settings → Apps → Tasks → Permissions → Location**, allow access, then retry. In the browser/PWA, enable Location for the site in the browser's site settings.
 
 ## Mobile notification sound
 

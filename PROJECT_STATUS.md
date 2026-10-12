@@ -109,7 +109,8 @@ Do not treat a successful website deployment as proof that the Android build or 
 
 ## Location permission + mobile sound follow-up (2026-10-11)
 
-- [x] Added Capacitor Geolocation to the Android app's location lookup path so Android can request runtime location permission instead of relying on browser geolocation inside the WebView.
+- [x] Added Capacitor Geolocation to the Android app's location lookup path.
+- [x] Fixed the reported APK runtime error by declaring ACCESS_COARSE_LOCATION and ACCESS_FINE_LOCATION in the generated AndroidManifest.xml during the APK build workflow.
 - [x] Added clearer recovery instructions for previously denied location permissions on Android and in browser site settings.
 - [x] Kept task-level sound presets and added accurate user-facing notes about preview vs Android notification-channel behavior.
 - [ ] Verify tests, website deployment and APK build for this commit.

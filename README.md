@@ -254,6 +254,6 @@ The app now uses a custom teal/green task-check logo in the app header and as th
 
 ## Location permission and mobile notification sounds
 
-On the Android APK, weather location uses Capacitor's native Geolocation permission flow so Android can show its runtime permission prompt. If permission was previously denied, open Android Settings → Apps → Tasks → Permissions → Location, allow access, and retry. In the browser/PWA, location permission remains controlled by the browser's site settings; a previously blocked site permission must be re-enabled there.
+On the Android APK, weather location uses Capacitor's native Geolocation permission flow. The APK build explicitly adds both ACCESS_COARSE_LOCATION and ACCESS_FINE_LOCATION to AndroidManifest.xml so Android can show its runtime permission prompt. If permission was previously denied, open Android Settings → Apps → Tasks → Permissions → Location, allow access, and retry. In the browser/PWA, location permission remains controlled by the browser's site settings; a previously blocked site permission must be re-enabled there.
 
 The task editor includes Default, Soft, Chime, Alert, Beep and No sound presets with a preview. Android APK notifications use separate channels per preset, with generated native sound assets for Soft, Chime, Alert and Beep. Android can retain channel settings once created; change them under Settings → Apps → Tasks → Notifications. The preview tone plays only while the app is open.
