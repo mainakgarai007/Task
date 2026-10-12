@@ -114,4 +114,6 @@ Do not treat a successful website deployment as proof that the Android build or 
 - [x] Kept task-level sound presets and added accurate user-facing notes about preview vs Android notification-channel behavior.
 - [ ] Verify tests, website deployment and APK build for this commit.
 - [ ] Confirm runtime location permission on the physical phone.
-- [ ] Complete native per-preset notification-channel sound mapping and verify it on the physical phone; current Android channel sound may override preview presets.
+- [x] Added per-preset Android notification channel IDs and generated native WAV assets for Soft, Chime, Alert and Beep in the APK build workflow.
+- [ ] Verify regression tests, website deployment and APK build for this commit.
+- [ ] Confirm the location permission recovery flow and native sound channels on the physical phone; Android may retain existing channel preferences.

@@ -118,11 +118,15 @@ export async function notify(title:string,body:string,options?:any){
    const permission=await LocalNotifications.checkPermissions();
    const granted=permission.display==="granted"||((await LocalNotifications.requestPermissions()).display==="granted");
    if(granted){
+    const soundChannels:Record<string,{id:string;label:string;file?:string;silent?:boolean}>={default:{id:"tasks_sound_default",label:"Tasks · Default"},soft:{id:"tasks_sound_soft",label:"Tasks · Soft",file:"tasks_soft"},chime:{id:"tasks_sound_chime",label:"Tasks · Chime",file:"tasks_chime"},alert:{id:"tasks_sound_alert",label:"Tasks · Alert",file:"tasks_alert"},beep:{id:"tasks_sound_beep",label:"Tasks · Beep",file:"tasks_beep"},none:{id:"tasks_sound_none",label:"Tasks · Silent",silent:true}};
+    const selected=soundChannels[sound]||soundChannels.default;
+    try{await LocalNotifications.createChannel({id:selected.id,name:selected.label,description:"Sound preference for Tasks reminders",importance:5,visibility:1,sound:selected.file, ...(selected.silent?{sound:undefined,vibration:false,lights:false}: {})});}catch{}
     const notificationId=Number(String(Date.now()).slice(-8));
     await LocalNotifications.schedule({notifications:[{
      id:notificationId,
      title,
      body,
+     channelId:selected.id,
      schedule:{at:new Date(Date.now()+1000)},
      extra:{taskId:options?.taskId,ackId:options?.ackId,ackMode:options?.ackMode},
     }]});

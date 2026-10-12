@@ -241,4 +241,4 @@ Tap **Use my current location** to request access. In the APK, Android's native 
 
 ## Mobile notification sound
 
-Choose Default, Soft, Chime, Alert, Beep or No sound in the task's **Notification sound** menu. **Preview sound** plays the tone while the app is open. Android may use the notification channel's sound setting instead of the preview tone; native per-preset notification channels are not yet fully mapped.
+Choose Default, Soft, Chime, Alert, Beep or No sound in the task's **Notification sound** menu. **Preview sound** plays the tone while the app is open. The Android APK now uses separate notification channels for Default, Soft, Chime, Alert, Beep and No sound. If a channel already exists, Android may preserve its previous sound choice; open Android Settings → Apps → Tasks → Notifications to change that channel. Preview plays only while Tasks is open.

@@ -78,7 +78,7 @@ export async function getCurrentLocation():Promise<{latitude:number;longitude:nu
   if(!navigator.geolocation){reject(new Error("Location access is not supported by this browser."));return;}
   navigator.geolocation.getCurrentPosition(
    p=>resolve({latitude:p.coords.latitude,longitude:p.coords.longitude}),
-   e=>reject(new Error(e.code===1?"Location permission was denied. Allow location access for this site.":e.code===2?"Your location could not be determined right now.":"Location request timed out.")),
+   e=>reject(new Error(e.code===1?"Location permission is blocked. On Android Chrome, open ⋮ → Settings → Site settings → Location → allow github.io, then reload Tasks and retry. If installed as an APK, open Android Settings → Apps → Tasks → Permissions → Location and allow access.":e.code===2?"Your location could not be determined right now.":"Location request timed out.")),
    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
   );
  });
