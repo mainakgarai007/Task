@@ -53,3 +53,5 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 
 .updateBtn{border:1px solid #235e50;background:#10251f;color:#9af0d0;border-radius:11px;padding:9px 11px;font-size:13px;font-weight:650;cursor:pointer;white-space:nowrap}.updateBtn:hover{background:#15372d}.updateActions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.updateActions button:disabled{opacity:.65;cursor:wait}.updateSection{border:1px solid #235e50;background:#0d1715;border-radius:14px;padding:14px;margin-bottom:16px}.updateSection h3{margin-top:0}
 @media(max-width:600px){.headerActions{gap:5px}.updateBtn{padding:9px 8px;font-size:12px}.manualBtn{padding:9px 11px}}
+
+.queueHint{color:#8b8b98;font-size:12px;margin:0 0 12px;padding:0 2px}

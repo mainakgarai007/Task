@@ -26,6 +26,7 @@ The RSS test suite covers RSS/Atom parsing, malformed responses, first-run seedi
 Create scheduled tasks manually or with AI. Tasks are stored locally in the browser and can run direct public-data actions without an AI call when possible.
 
 ### Task management
+- Round-robin task list: tasks not yet run are ordered by next scheduled time; after a task runs/completes, it moves behind the remaining tasks, preserving run order (A → B → C → A).
 - Create, edit, pause, resume and safely delete tasks
 - Run now
 - Multiple tasks

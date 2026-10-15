@@ -8,6 +8,7 @@ import {nextRun,notify,playNotificationSound,intervalToMinutes,syncNativeTaskRem
 import {evaluateCondition,evaluateConditionTree} from "./conditions";
 import {createTaskWithAI,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel,executeTaskWithAI} from "./ai";
 import {executeDirectTask,getCurrentLocation,reverseGeocodeIndia,searchAnime} from "./dataSources";
+import {sortTasksForQueue} from "./taskQueue";
 
 function localISO(date:Date){return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);}
 function formatDateDMY(value:string){if(!value)return "";const m=value.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+"/"+m[2]+"/"+m[1]:value;}
@@ -371,7 +372,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
   return()=>clearInterval(timer);
  },[]);
 
- const visible=useMemo(()=>tasks.filter(t=>filter==="all"||(filter==="active"&&t.enabled)||(filter==="paused"&&!t.enabled)),[tasks,filter]);
+ const visible=useMemo(()=>sortTasksForQueue(tasks.filter(t=>filter==="all"||(filter==="active"&&t.enabled)||(filter==="paused"&&!t.enabled))),[tasks,filter]);
 
  async function checkForUpdates(){
   setUpdateState("checking");

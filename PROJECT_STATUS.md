@@ -128,3 +128,11 @@ Do not treat a successful website deployment as proof that the Android build or 
 - [x] Checker queries the repository latest-release API and looks for a published APK asset; it reports unavailable releases and network errors.
 - [x] Documented Android same-signing-certificate requirement and the fact that Actions artifacts are not releases.
 - [ ] Publish APK releases signed with a stable signing key and verify in-place upgrade on a physical phone. The existing debug build may use a different signing key; do not claim update-without-uninstall is verified until Android accepts the upgrade.
+
+
+## Round-robin task queue (implementation added)
+
+- [x] Task list orders never-run tasks by next scheduled time.
+- [x] A task moves behind the unrun tasks after it executes; already-run tasks retain run-time order, enabling A → B → C → A rotation.
+- [x] Added focused unit tests for initial time order, A completion, B completion, and input immutability.
+- [ ] Verify regression suite, web deployment and Android APK build for this commit.

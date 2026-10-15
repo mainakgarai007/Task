@@ -7,6 +7,10 @@ Tap **↻ Update** in the app header, then tap **Check for updates**. If a relea
 ## Create a task
 Tap **＋** and choose Manual or AI. Manual mode lets you choose the schedule, action, notification mode, sequence and IF/THEN rules. AI mode creates a plan from natural language using your configured provider.
 
+## Task queue order
+
+The task list automatically orders tasks that have not run yet by their next scheduled time. After a task runs/completes, it moves behind tasks that have not run yet; already-run tasks stay ordered by run time. Example: at 6 AM, tasks scheduled for 7 AM, 8 AM and 9 AM appear as **A, B, C**. After A runs, the order becomes **B, C, A**; after B runs, it becomes **C, A, B**. This changes only the display order, not the configured schedule or execution logic.
+
 ## Scheduling
 Supported schedules: once, hourly, daily, weekly, monthly and custom intervals in minutes, hours or days (up to 365 days). Custom intervals are relative to the previous run. Start date, end date, multiple weekdays, multiple months, month-days and maximum run count are supported. For older monthly tasks without an explicit month selection, the scheduler defaults to every month.
 
