@@ -139,10 +139,6 @@ jobs:
 
       - name: Report APK signing mode
         run: |
-          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then echo "Stable signing secret configured; future APKs can update in place."; else echo "::warning::No stable Android signing secrets configured. This preview APK uses a temporary runner debug key and cannot be guaranteed to update an installed APK without uninstalling."; fi
-
-      - name: Report APK signing mode
-        run: |
           if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then echo "Stable signing secret configured; future APKs can update in place."; else echo "::warning::No stable Android signing secrets configured. This preview APK uses a temporary runner debug key and cannot be guaranteed to update an installed APK without uninstalling."; fi
 
       - name: Publish APK GitHub Release for version tags
