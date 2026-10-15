@@ -4,7 +4,7 @@ import {loadTasks,saveTasks,uid} from "./storage";
 import {ExecutionGuard, shouldRecoverRunningExecution, reenableFailedTask} from "./executionGuard";
 import {parseBackup,createBackup} from "./backup";
 import {parseNotificationAction} from "./notificationActions";
-import {nextRun,notify,playNotificationSound,intervalToMinutes} from "./scheduler";
+import {nextRun,notify,playNotificationSound,intervalToMinutes,syncNativeTaskReminders} from "./scheduler";
 import {evaluateCondition,evaluateConditionTree} from "./conditions";
 import {createTaskWithAI,loadAISettings,parsedTaskToTask,saveAISettings,AISettings,AIProvider,providerLabels,providerEndpoint,getModelHints,searchModels,AIModel,executeTaskWithAI} from "./ai";
 import {executeDirectTask,getCurrentLocation,reverseGeocodeIndia,searchAnime} from "./dataSources";
@@ -212,7 +212,7 @@ const [manualConditionTree,setManualConditionTree]=useState<TaskConditionGroup>(
   ["taskAckTask","taskAckId","taskAckAction"].forEach(key=>url.searchParams.delete(key));
   window.history.replaceState({}, "", url.pathname+url.search+url.hash);
  },[]);
- useEffect(()=>{saveTasks(tasks);},[tasks]);
+ useEffect(()=>{saveTasks(tasks);void syncNativeTaskReminders(tasks);},[tasks]);
  useEffect(()=>{if(!aiReady)return;setTasks(ts=>ts.map(t=>t.executionState==="waiting"&&t.waitingReason==="AI settings are required"?{...t,executionState:"idle",waitingReason:undefined}:t));},[aiReady]);
  useEffect(()=>{if(manualType!=="weather"){setWeatherPlaces([]);return;}const q=weatherSearch.trim();if(!q){setWeatherPlaces([]);return;}const timer=setTimeout(async()=>{setWeatherBusy(true);try{const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=100&language=en&format=json&countryCode=IN");if(!r.ok)throw new Error();const d=await r.json();setWeatherPlaces((d?.results||[]).filter((p:any)=>p.country_code==="IN").map((p:any)=>({name:p.name,state:p.admin1,country:p.country,latitude:p.latitude,longitude:p.longitude})));}catch{setWeatherPlaces([]);}finally{setWeatherBusy(false);}},280);return()=>clearTimeout(timer);},[weatherSearch,manualType]);
  useEffect(()=>{if(manualType!=="anime"){setAnimeSearchResults([]);return;}const q=manualTopic.trim();if(!q){setAnimeSearchResults([]);return;}const timer=setTimeout(async()=>{setAnimeSearchBusy(true);try{setAnimeSearchResults(await searchAnime(q));}catch{setAnimeSearchResults([]);}finally{setAnimeSearchBusy(false);}},350);return()=>clearTimeout(timer);},[manualTopic,manualType]);

@@ -150,3 +150,45 @@ export async function notify(title:string,body:string,options?:any){
   if(customSound)playNotificationSound(sound);
  }catch{}
 }
+
+
+/**
+ * Keep Android reminder alarms in the OS notification scheduler.
+ * These are due-time reminders only; they do not run the task's network/AI actions.
+ */
+export async function syncNativeTaskReminders(tasks:Task[]):Promise<void>{
+ if(!Capacitor.isNativePlatform())return;
+ try{
+  const permission=await LocalNotifications.checkPermissions();
+  const granted=permission.display==="granted"||((await LocalNotifications.requestPermissions()).display==="granted");
+  if(!granted)return;
+  const pending=await LocalNotifications.getPending();
+  const owned=pending.notifications.filter(n=>n.id>=100000&&n.id<200000).map(n=>({id:n.id}));
+  if(owned.length)await LocalNotifications.cancel({notifications:owned});
+  const active=tasks.filter(t=>t.enabled&&t.status==="active"&&t.frequency!=="once"||t.enabled&&t.status==="active"&&t.frequency==="once");
+  const now=Date.now();
+  const notifications=active.map((task,index)=>{
+   const at=new Date(task.nextRun);
+   if(!Number.isFinite(at.getTime())||at.getTime()<=now)return null;
+   const id=100000+(hashTaskId(task.id)%90000);
+   const repeats=task.frequency!=="once";
+   return {
+    id,
+    title:"Task due: "+task.title,
+    body:"Open Tasks to run this automation.",
+    schedule:{at,repeats,allowWhileIdle:true},
+    channelId:"tasks_sound_default",
+    extra:{taskId:task.id,kind:"task-due-reminder"},
+   };
+  }).filter((n):n is NonNullable<typeof n>=>Boolean(n));
+  if(notifications.length)await LocalNotifications.schedule({notifications});
+ }catch(error){
+  console.warn("Could not sync native task reminders",error);
+ }
+}
+
+function hashTaskId(value:string):number{
+ let hash=0;
+ for(let i=0;i<value.length;i++)hash=(Math.imul(hash,31)+value.charCodeAt(i))|0;
+ return Math.abs(hash)%90000;
+}

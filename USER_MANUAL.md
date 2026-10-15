@@ -227,7 +227,7 @@ Important: this wrapper does not yet make browser timers persistent Android back
 
 ## Android native notifications (preview)
 
-In the Android APK, notifications requested while the app is running use Android's native local-notification API and may request notification permission. The browser version continues using browser/service-worker notifications. The current integration does not yet convert all task schedules into persistent Android background jobs, and it does not guarantee task execution after the app is force-stopped or the phone reboots. Test on your phone before relying on it for important reminders.
+In the Android APK, notifications requested while the app is running use Android's native local-notification API and may request notification permission. The browser version continues using browser/service-worker notifications. Enabled tasks are synced to Android Local Notifications as due-time reminders, including repeating reminders for recurring schedules. These reminders say to open Tasks to run the automation; they do not execute the weather/news/anime/API/AI action while the app is closed. Task execution still uses in-app timers, and force-stop, battery restrictions or exact-alarm settings may affect delivery. Test on your phone before relying on it for important reminders.
 
 
 ## App logo

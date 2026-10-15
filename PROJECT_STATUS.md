@@ -94,7 +94,8 @@ Do not treat a successful website deployment as proof that the Android build or 
 - [x] Kept task/acknowledgement metadata in notification extras for future native action handling.
 - [ ] Verify regression tests, website build/deploy and APK build in CI.
 - [ ] Confirm notification permission and delivery on a physical Android device.
-- [ ] Persistent background scheduling, reboot recovery, and native acknowledgement action buttons remain separate tasks.
+- [x] Added OS-scheduled Android due-time reminders for enabled tasks, synced whenever task state changes.
+- [ ] Persistent execution of task actions while the app is closed, reboot recovery, and native acknowledgement action buttons remain separate tasks.
 
 
 ## P8 — Native notifications and app identity (in progress)
@@ -104,7 +105,8 @@ Do not treat a successful website deployment as proof that the Android build or 
 - [x] Corrected the native notification payload by removing a no-op sound property; task and acknowledgement IDs remain attached as extras.
 - [ ] Run regression tests, web production build, Pages deployment, and Android APK build on the latest commit.
 - [ ] Verify native notifications and logo presentation on a physical Android device.
-- [ ] Native persistent scheduling, Android launcher icon replacement, custom notification channels/sounds, and notification action buttons remain follow-up work.
+- [x] Added native OS-scheduled due-time reminders for enabled tasks so the due reminder can appear while the app is closed.
+- [ ] Background execution of the actual task action while closed, Android launcher icon replacement, and native notification action buttons remain follow-up work.
 
 
 ## Location permission + mobile sound follow-up (2026-10-11)

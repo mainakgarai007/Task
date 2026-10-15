@@ -244,7 +244,7 @@ This first wrapper build is a preview, not a claim of full native parity. Existi
 
 ## Android native notifications — P8 preview
 
-The Capacitor Android build now routes app-generated notifications through the native Local Notifications plugin when running inside the Android app. The browser/service-worker path remains unchanged. Android may prompt for notification permission. This handles notifications generated while the app is executing; it does **not** yet schedule every task as a persistent native background job or guarantee delivery after force-stop/reboot. A successful CI APK build is not a substitute for testing notification permission and delivery on a physical phone.
+The Capacitor Android build now routes app-generated notifications through the native Local Notifications plugin when running inside the Android app. The browser/service-worker path remains unchanged. Android may prompt for notification permission. The APK now syncs each enabled task’s next due time to Android Local Notifications, including repeating OS-level due reminders, so a reminder can appear while the app is closed. These are due-time reminders only: Android does not execute the task’s weather/news/anime/API/AI action while the app is closed. Task execution still uses in-app timers and persistent background execution of task actions remains outstanding. Force-stop, battery restrictions and exact-alarm settings can still affect delivery; verify on a physical phone.
 
 
 ## App logo
