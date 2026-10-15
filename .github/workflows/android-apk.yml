@@ -103,30 +103,7 @@ jobs:
           if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tasks-release.jks"
             echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/tasks-release.jks" >> "$GITHUB_ENV"
-            python3 - <<'PY'
-            from pathlib import Path
-            path = Path("android/app/build.gradle")
-            text = path.read_text()
-            block = '''
-            if (System.getenv("ANDROID_KEYSTORE_PATH")) {
-                android {
-                    signingConfigs {
-                        stableUpdate {
-                            storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
-                            storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                            keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                            keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-                        }
-                    }
-                    buildTypes {
-                        debug { signingConfig signingConfigs.stableUpdate }
-                    }
-                }
-            }
-            '''
-            if "signingConfigs.stableUpdate" not in text:
-                path.write_text(text + "\n" + block)
-            PY
+            python3 scripts/configure-android-signing.py
             echo "Stable signing key configured for in-place updates."
           else
             echo "::warning::Stable Android signing secrets are not configured; this debug APK may not update an installed APK without uninstalling."
