@@ -1,5 +1,9 @@
 # Tasks — User Manual
 
+## Update the Android app without uninstalling
+
+Tap **↻ Update** in the app header, then tap **Check for updates**. If a release is available, choose **Download** and open the downloaded APK. Android should offer to update the existing app; confirm the update and do not uninstall first. Your saved tasks should remain if the update uses the same app ID and signing certificate. If Android reports a signature conflict, the APK signing key differs and an in-place update is not possible with that file. If no published release exists, the checker cannot offer an APK yet; Actions artifacts alone are not published releases.
+
 ## Create a task
 Tap **＋** and choose Manual or AI. Manual mode lets you choose the schedule, action, notification mode, sequence and IF/THEN rules. AI mode creates a plan from natural language using your configured provider.
 

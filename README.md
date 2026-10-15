@@ -4,6 +4,10 @@ A standalone, mobile-first task automation app inspired by the workflow of ChatG
 
 Live app: https://mainakgarai007.github.io/Task/
 
+## Android app updates
+
+The app header has an **↻ Update** option. It checks the public GitHub Releases page for the latest release with an APK asset. If a release exists, download the APK and open it to install over the existing app; Android preserves app data only when the new APK uses the same application ID and signing certificate. Do not uninstall first. If Android reports a signature conflict, the installed build and downloaded build were signed with different keys; Android does not permit an in-place update across signing keys. GitHub Actions artifacts are build outputs, not published releases, so a release with an APK asset must be published for the in-app checker to find an update.
+
 ## User manual
 
 The live app includes an in-app **? User Manual** button in the header. It explains task creation, scheduling, Weather location modes, Anime monitoring, smart rules, AI, backups, notifications and current browser limitations. **Update rule: whenever a feature or workflow changes, the in-app manual, `USER_MANUAL.md` and this README should be updated together.**

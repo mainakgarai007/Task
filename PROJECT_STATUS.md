@@ -120,3 +120,11 @@ Do not treat a successful website deployment as proof that the Android build or 
 - [x] Added per-preset Android notification channel IDs and generated native WAV assets for Soft, Chime, Alert and Beep in the APK build workflow.
 - [ ] Verify regression tests, website deployment and APK build for this commit.
 - [ ] Confirm the location permission recovery flow and native sound channels on the physical phone; Android may retain existing channel preferences.
+
+
+## Android in-app update checker (implementation added)
+
+- [x] Added a header **↻ Update** entry and a check/download section in the in-app manual.
+- [x] Checker queries the repository latest-release API and looks for a published APK asset; it reports unavailable releases and network errors.
+- [x] Documented Android same-signing-certificate requirement and the fact that Actions artifacts are not releases.
+- [ ] Publish APK releases signed with a stable signing key and verify in-place upgrade on a physical phone. The existing debug build may use a different signing key; do not claim update-without-uninstall is verified until Android accepts the upgrade.
