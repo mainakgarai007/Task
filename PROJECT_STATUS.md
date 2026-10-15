@@ -136,3 +136,16 @@ Do not treat a successful website deployment as proof that the Android build or 
 - [x] A task moves behind the unrun tasks after it executes; already-run tasks retain run-time order, enabling A → B → C → A rotation.
 - [x] Added focused unit tests for initial time order, A completion, B completion, and input immutability.
 - [ ] Verify regression suite, web deployment and Android APK build for this commit.
+
+
+## Deleted-task notification fix + stable update signing
+
+- [x] Native reminder reconciliation now cancels all app-owned pending due reminders before checking notification permission.
+- [x] Serialized reminder sync calls so an older task snapshot cannot reschedule deleted tasks after a newer state sync.
+- [x] Removed task-ID hash collisions by assigning unique IDs across the active reminder set.
+- [x] Added tests for disabled/inactive tasks, unique IDs, one-time vs recurring reminders, and stale/invalid due times.
+- [x] APK workflow supports a stable signing keystore through repository Actions secrets.
+- [ ] Configure the four Android signing secrets; do not commit keystore files or passwords.
+- [ ] Verify regression tests, website deployment and APK build on this commit.
+- [ ] Verify deleting a task cancels its pending reminder on a physical phone.
+- [ ] The currently installed APK may need a one-time reinstall if it was signed with a different ephemeral debug key. After stable signing is configured, future APK updates can preserve local task data without uninstalling.

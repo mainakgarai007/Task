@@ -250,3 +250,8 @@ Tap **Use my current location** to request access. In the APK, Android's native 
 ## Mobile notification sound
 
 Choose Default, Soft, Chime, Alert, Beep or No sound in the task's **Notification sound** menu. **Preview sound** plays the tone while the app is open. The Android APK now uses separate notification channels for Default, Soft, Chime, Alert, Beep and No sound. If a channel already exists, Android may preserve its previous sound choice; open Android Settings → Apps → Tasks → Notifications to change that channel. Preview plays only while Tasks is open.
+
+
+## Important: in-place APK updates
+
+Future APKs can update without uninstalling only when the installed and new APK share the same signing certificate. Builds created before stable signing is configured may have a different temporary key; Android will reject those updates. If Android reports a signature conflict, export a task backup, then reinstall once using the stable-signed APK. After stable signing is configured in GitHub Actions, keep the keystore and passwords private and unchanged.
